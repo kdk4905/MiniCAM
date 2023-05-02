@@ -5,9 +5,17 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MiniCAM"
         mc:Ignorable="d"
-        Title="MiniCAM" Height="1200" Width="1200">
-    <Grid>
-        <ComboBox x:Name="cbx_Port" Height="25" Width="70" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="10,10,10,10"/>
-        <Canvas Width="1000" Height="1000"/>
-    </Grid>
+        Title="MiniCAM" Height="1000" Width="1000">
+    <StackPanel Height="900" Width="900" VerticalAlignment="Center" HorizontalAlignment="Center">
+        <ComboBox x:Name="cbx_Port" Height="25" Width="70" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="10,20,0,0"/>
+        <Label Content="연결상태 :" x:Name="lblConnectState" Height="25" Width="500" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="10,10,10,0"/>
+        <Button Content="기기연결" x:Name="btnMachineConnect" Height="30" Width="100" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,10,10,0" Click="btnMachineConnect_Click"/>
+        <Button Content="조각시작" x:Name="btnOperationStart" Height="30" Width="100" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,5,10,0"/>
+        <Button Content="이미지 불러오기" x:Name="btnImageOpen" Height="30" Width="100" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,5,10,0" Click="btnImageOpen_Click"/>
+        <Canvas x:Name="canvas" Width="500" Height="500" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+        <Label Content="속도 :" x:Name="lblVelocity" Height="25" Width="500" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="10,10,10,0"/>
+        <Label Content="깊이 :" x:Name="lblDepth" Height="25" Width="500" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="10,10,10,0"/>
+        <Label Content="이동높이 :" x:Name="lblMovementHeight" Height="25" Width="500" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="10,10,10,0"/>
+        <Label Content="해칭간격 :" x:Name="lblLocation" Height="25" Width="500" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="10,10,10,0"/>
+    </StackPanel>
 </Window>
