@@ -1,0 +1,13 @@
+﻿<Window x:Class="MiniCAM.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MiniCAM"
+        mc:Ignorable="d"
+        Title="MiniCAM" Height="1200" Width="1200">
+    <Grid>
+        <ComboBox x:Name="cbx_Port" Height="25" Width="70" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="10,10,10,10"/>
+        <Canvas Width="1000" Height="1000"/>
+    </Grid>
+</Window>
