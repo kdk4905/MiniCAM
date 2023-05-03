@@ -74,8 +74,9 @@ namespace MiniCAM
             {
                 if (File.Exists(openDialog.FileName))
                 {
-                    //readfromFile(openDialog.FileName);
+                    
                     bitmap = new Bitmap(openDialog.FileName);
+                    bitmap.SetResolution(200, 200);
                     //Stream imageStreamSource = new FileStream(openDialog.FileName, FileMode.Open, FileAccess.Read, FileShare.Read);
                     //PngBitmapDecoder decoder = new PngBitmapDecoder(imageStreamSource, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.Default);
                     BitmapSource bitmapSource = BmpConvert(bitmap);
@@ -93,7 +94,7 @@ namespace MiniCAM
                     //CNC 이미지 비트맵 변환
                     bitmap = new Bitmap(GetBitmapFromBitmapSource(bitmapSource));
                     //bitmap = new Bitmap(myImage.Source);
-                    Bitmap btmFile = new Bitmap(bitmap, 200, 200);
+                    Bitmap btmFile = new Bitmap(bitmap, 500, 500);
                     //btmFile.SetResolution(200,200);
                     //bitmap.Width = 500;
                     //bitmap.Height = 500;
