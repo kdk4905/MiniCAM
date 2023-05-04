@@ -2,26 +2,17 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.IO.Ports;
-using System.Linq;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using static System.Net.Mime.MediaTypeNames;
-using Color = System.Drawing.Color;
-using Image = System.Windows.Controls.Image;
+using System.Windows.Threading;
+using Point = System.Drawing.Point;
 
 namespace MiniCAM
 {
@@ -30,20 +21,32 @@ namespace MiniCAM
     /// </summary>
     public partial class MainWindow : Window
     {
+        Queue Data = new Queue(); //데이터 저장 큐
         SerialPort sp = new SerialPort();
+        List<string> Order = new List<string>();
+        string T_msg = ""; //WPF Text 저장용
+        bool IsSpOpen;
         // CNC 이미지
-        Image myImage;
+        System.Windows.Controls.Image myImage;
         // Bitmap 이미지
-        Bitmap bitmap;
-        // Color 객체
-        // 비트맵 흰색, 검은색 구분
-        Color color;
+        // Color 구조체
+        System.Drawing.Color color;
+        // rgb 변수
+        int rgb;
+        // bmp의 좌표
+        int[,] Hatch;
+
+        List<Point>bmpPixelPoint = new List<Point>();
 
         public MainWindow()
         {
             InitializeComponent();
             cbx_Port.ItemsSource = SerialPort.GetPortNames();
-//          lblMachineInfo.Content = SerialPort.GetPortNames();
+            initToolpath();
+            
+            Thread t = new Thread(text);
+            t.IsBackground = true;
+            t.Start();
         }
 
         private void btnMachineConnect_Click(object sender, RoutedEventArgs e)
@@ -55,7 +58,10 @@ namespace MiniCAM
                 sp.DataBits = 8;
                 sp.Parity = Parity.None;
                 sp.StopBits = StopBits.One;
-                sp.Open();
+                sp.DataReceived += new SerialDataReceivedEventHandler(sp_DataReceived);
+
+                sp.Open(); //시리얼포트 열기
+                sp.WriteLine("!BP1;");
 
                 lblConnectState.Content += " 포트가 연결되었습니다.";
             }
@@ -66,97 +72,139 @@ namespace MiniCAM
             }
         }
 
+        //시리얼 포트 데이터 리시브 이벤트
+        private void sp_DataReceived(object sender, SerialDataReceivedEventArgs e)
+        {
+            string getData = sp.ReadExisting();
+            Data.Enqueue(getData);
+            Thread.Sleep(1);
+        }
+
+        private void MySerialReceived(object sender, EventArgs e)
+        {
+        }
+
+        private void text()
+        {
+            while (true)
+            {
+                if (Data.Count > 0)
+                {
+                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
+                    {
+                        string msg = DateTime.Now.ToString("HH:mm:ss.fff");
+                        var ReceiveData = Data.Dequeue();
+
+                        msg = string.Format("{0} : {1}\r\n", msg, ReceiveData);
+                        T_msg = string.Format("{0} : {1}", T_msg, msg);
+                        //T_text_list.Text = T_msg;
+                        //T_text_list.SelectionStart = T_text_list.Text.Length;
+                        //T_text_list.ScrollToEnd();
+                    }));
+                }
+                Thread.Sleep(10);
+            }
+        }
+
         private void btnImageOpen_Click(object sender, RoutedEventArgs e)
         {
             OpenFileDialog openDialog = new OpenFileDialog();
-
             if (openDialog.ShowDialog() == true)
             {
                 if (File.Exists(openDialog.FileName))
                 {
-                    
-                    bitmap = new Bitmap(openDialog.FileName);
-                    bitmap.SetResolution(200, 200);
-                    //Stream imageStreamSource = new FileStream(openDialog.FileName, FileMode.Open, FileAccess.Read, FileShare.Read);
-                    //PngBitmapDecoder decoder = new PngBitmapDecoder(imageStreamSource, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.Default);
-                    BitmapSource bitmapSource = BmpConvert(bitmap);
-                    //int stride = (int)bitmap.Width;
-                    //int size = (int)bitmap.Height;
-                    //byte[] pixels = new byte[size];
-                    //bitmapSource.CopyPixels(pixels, stride, 0);
+                    Stream imageStreamSource = new FileStream(openDialog.FileName, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    PngBitmapDecoder decoder = new PngBitmapDecoder(imageStreamSource, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.Default);
+                    BitmapSource bitmapSource = decoder.Frames[0];
+
+                    // 비트맵 이미지
+                    Bitmap bmp = new Bitmap(GetBitmapFromBitmapSource(bitmapSource));
+                    // Hatch를 위한 배열
+                    Hatch = new int[bmp.Width, bmp.Height];
+                    for (int w = 0; w < bmp.Width; w++)
+                    {
+                        for (int h = 0; h < bmp.Height; h++)
+                        {
+                            color = bmp.GetPixel(w, h);
+                            rgb = (color.R + color.G + color.B) / 3;
+                            //Point bmpPoint = new Point(w, h);
+                            //bmpPixelPoint.Add(bmpPoint);
+                            //gray rgb(128,128,128)
+                            if (rgb > (128+128+128 / 3))
+                            {
+                                bmp.SetPixel(w, h, System.Drawing.Color.White);
+                            }
+                            else
+                            {
+                                bmp.SetPixel(w, h, System.Drawing.Color.Black);
+                                Hatch[w,h] = 1;
+                                int z = 100;
+                                string aa = makeToolpath(w.ToString(), h.ToString(), z.ToString());
+                                Console.WriteLine(aa);
+                                Debug.WriteLine(aa);
+                                Order.Add(aa);
+                            }
+                        }
+                    } // bmp 이미지 이진화 완료
 
                     //CNC 할 이미지
-                    myImage = new Image();
+                    myImage = new System.Windows.Controls.Image();
                     myImage.Source = bitmapSource;
                     myImage.Width = 500;
                     myImage.Height = 500;
-
-                    //CNC 이미지 비트맵 변환
-                    bitmap = new Bitmap(GetBitmapFromBitmapSource(bitmapSource));
-                    //bitmap = new Bitmap(myImage.Source);
-                    Bitmap btmFile = new Bitmap(bitmap, 500, 500);
-                    //btmFile.SetResolution(200,200);
-                    //bitmap.Width = 500;
-                    //bitmap.Height = 500;
-                    //.SetResolution() 해상도
-                    //bitmap.SetResolution(10, 10);
-                    //bitmap.SetResolution((float)myImage.Width, (float)myImage.Height);
-
-                    //비트맵 GetPixel(x,y)
-                    //color = new Color();
-                    List<Color> colors = new List<Color>();
-
-                    for (int y = 0; y < btmFile.Height; y++)
-                    {
-                        for (int x = 0; x < btmFile.Width; x++)
-                        {
-                            color = btmFile.GetPixel(x, y);
-                            if ((color.R == 0 && color.G == 0 && color.B == 0)||(color.R != 255 && color.G !=255 && color.B != 255))
-                            {
-                                color = Color.FromArgb(255, 0, 0);
-                                btmFile.SetPixel(x, y, color);
-                            }
-                        }
-                    }
                     //화면에 보여줄 이미지
-                    Image preImage = new Image();
+
+                    System.Windows.Controls.Image preImage = new System.Windows.Controls.Image();
                     preImage.Source = bitmapSource;
                     preImage.Width = 200;
                     preImage.Height = 200;
 
-                    myImage.Tag = System.IO.Path.GetFullPath(openDialog.FileName);
-                    
                     stackpnlImage.Children.Add(preImage);
-                    // 25000 출력 완료
-                    MessageBox.Show(colors.Count.ToString());
-                    for (int i = 0; i < colors.Count; i++)
-                    {
-                        MessageBox.Show(colors[i].ToString());
-                        break;
-                    }
-                    stackpnlImage.Children.Remove(preImage);
-                    preImage.Source = BmpConvert(bitmap);
-                    stackpnlImage.Children.Add(preImage);
+                    #region 변환된 비트맵 이미지 확인
+                    //변환된 비트맵 이미지
+                    //비트맵 to 비트맵소스
+                    //stackpnlImage.Children.Remove(preImage);
+                    //preImage.Source = GetBitmapSourceFromBitmap(bmp);
+                    //stackpnlImage.Children.Add(preImage);
+                    #endregion
                 }
             }
         }
-        public static BitmapSource BmpConvert(System.Drawing.Bitmap bitmap)
+
+        private void btnOperationStart_Click(object sender, RoutedEventArgs e)
         {
-            var bitmapData = bitmap.LockBits(
-                new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height),
-                System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
-
-            var bitmapSource = BitmapSource.Create(
-                bitmapData.Width, bitmapData.Height,
-                bitmap.HorizontalResolution, bitmap.VerticalResolution,
-                PixelFormats.Bgr24, null,
-                bitmapData.Scan0, bitmapData.Stride * bitmapData.Height, bitmapData.Stride);
-
-            bitmap.UnlockBits(bitmapData);
-
-            return bitmapSource;
+            //string order = "VS36;\r\n!ZZ-55,-165,-200;\r\n!ZZ-55,-165,-200;\r\n!ZZ-55,-165,-200;\r\nVS24;\r\n!ZZ-55,-165,100;\r\n!ZZ-8,-165,100;\r\n!ZZ-21,-165,100;\r\n!ZZ-21,-115,100;\r\n!ZZ-74,-115,100;\r\n!ZZ-74,-65,100;\r\n!ZZ-93,-65,100;\r\n!ZZ-39,-65,100;\r\n!ZZ-58,-65,100;\r\n!ZZ-58,-15,100;\r\n!ZZ-112,-15,100;\r\n!ZZ-112,35,100;\r\n!ZZ-132,35,100;\r\n!ZZ-76,35,100;\r\n!ZZ-94,35,100;\r\n!ZZ-94,85,100;\r\n!ZZ-151,85,100;\r\n!ZZ-151,135,100;\r\n!ZZ-170,135,100;\r\n!ZZ-112,135,100;\r\n!ZZ-130,135,100;\r\n!ZZ-130,185,100;\r\n!ZZ-189,185,100;\r\nVS36;\r\n!ZZ-189,185,-200;\r\n!ZZ87,85,-200;\r\nVS24;\r\n!ZZ87,85,100;\r\n!ZZ148,85,100;\r\n!ZZ148,135,100;\r\n!ZZ168,135,100;\r\n!ZZ106,135,100;\r\n!ZZ125,135,100;\r\n!ZZ125,185,100;\r\n!ZZ189,185,100;\r\nVS36;\r\n!ZZ189,185,-200;\r\n!ZZ45,-165,-200;\r\nVS24;\r\n!ZZ45,-165,100;\r\n!ZZ-5,-165,100;\r\n!ZZ11,-165,100;\r\n!ZZ11,-115,100;\r\n!ZZ66,-115,100;\r\n!ZZ66,-65,100;\r\n!ZZ86,-65,100;\r\n!ZZ30,-65,100;\r\n!ZZ49,-65,100;\r\n!ZZ49,-15,100;\r\n!ZZ107,-15,100;\r\n!ZZ107,35,100;\r\n!ZZ127,35,100;\r\n!ZZ68,35,100;\r\nVS36;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!VO;";
+            //Order.Add(order);
+            for (int i = 0; i < Order.Count; i++)
+            {
+                sp.WriteLine(Order[i]);
+            }
+            sp.WriteLine("!VO;");
+            //string order = "IN;!ZC320;\r\n!CL1;\r\n!PM0,0;\r\n!ZC200;!MH-189,-164,377,349,0,2,1,1,1;\r\n!MH-189,-164,377,349,0,1,0,1,1;\r\n!SR0;\r\nVS36;\r\n!ZZ-55,-165,-200;\r\n!ZZ-55,-165,-200;\r\n!ZZ-55,-165,-200;\r\nVS24;\r\n!ZZ-55,-165,100;\r\n!ZZ-8,-165,100;\r\n!ZZ-21,-165,100;\r\n!ZZ-21,-115,100;\r\n!ZZ-74,-115,100;\r\n!ZZ-74,-65,100;\r\n!ZZ-93,-65,100;\r\n!ZZ-39,-65,100;\r\n!ZZ-58,-65,100;\r\n!ZZ-58,-15,100;\r\n!ZZ-112,-15,100;\r\n!ZZ-112,35,100;\r\n!ZZ-132,35,100;\r\n!ZZ-76,35,100;\r\n!ZZ-94,35,100;\r\n!ZZ-94,85,100;\r\n!ZZ-151,85,100;\r\n!ZZ-151,135,100;\r\n!ZZ-170,135,100;\r\n!ZZ-112,135,100;\r\n!ZZ-130,135,100;\r\n!ZZ-130,185,100;\r\n!ZZ-189,185,100;\r\nVS36;\r\n!ZZ-189,185,-200;\r\n!ZZ87,85,-200;\r\nVS24;\r\n!ZZ87,85,100;\r\n!ZZ148,85,100;\r\n!ZZ148,135,100;\r\n!ZZ168,135,100;\r\n!ZZ106,135,100;\r\n!ZZ125,135,100;\r\n!ZZ125,185,100;\r\n!ZZ189,185,100;\r\nVS36;\r\n!ZZ189,185,-200;\r\n!ZZ45,-165,-200;\r\nVS24;\r\n!ZZ45,-165,100;\r\n!ZZ-5,-165,100;\r\n!ZZ11,-165,100;\r\n!ZZ11,-115,100;\r\n!ZZ66,-115,100;\r\n!ZZ66,-65,100;\r\n!ZZ86,-65,100;\r\n!ZZ30,-65,100;\r\n!ZZ49,-65,100;\r\n!ZZ49,-15,100;\r\n!ZZ107,-15,100;\r\n!ZZ107,35,100;\r\n!ZZ127,35,100;\r\n!ZZ68,35,100;\r\nVS36;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!VO;\r\n";
+            //sp.WriteLine(order);
         }
 
+        private void initToolpath() 
+        {
+            Order.Add("IN;!ZC320;");
+            Order.Add("!CL1;");
+            Order.Add("!PM0,0;");
+            Order.Add("!ZC200;!MH-189,-164,500,500,0,2,1,1,1;");
+            Order.Add("!MH-189,-164,500,500,0,1,0,1,1;");
+            Order.Add("!SR0;");
+            Order.Add("!VS36;");
+            //Order.Add("!MH-189,-164,377,349,0,1,0,1,1;");//소재 위치 체크
+        }
+
+        private string makeToolpath(string w, string h , string z) 
+        {
+            string _w = w + ",";
+            string _h = h + ",";
+            string _z = z;
+            string toolpath = "!ZZ" + _w + _h + z;
+            return toolpath;
+        }
+        //이미지 소스 to 비트맵 
         private System.Drawing.Bitmap GetBitmapFromBitmapSource(BitmapSource bitmapSource)
         {
             System.Drawing.Bitmap bitmap;
@@ -175,14 +223,35 @@ namespace MiniCAM
 
             return bitmap;
         }
-        private System.Drawing.Bitmap readfromFile(string filename)
+        //비트맵 to 이미지 소스
+        private BitmapSource GetBitmapSourceFromBitmap(System.Drawing.Bitmap bitmap)
         {
-            FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read);
-            byte[] bytes = new byte[fs.Length];
-            fs.Read(bytes, 0, Convert.ToInt32(fs.Length));
-            MemoryStream ms = new MemoryStream(bytes);
-            System.Drawing.Bitmap bmp = new System.Drawing.Bitmap(ms);
-            return bmp;
+            BitmapSource bitmapSource;
+
+
+            IntPtr hBitmap = bitmap.GetHbitmap();
+            BitmapSizeOptions sizeOptions = BitmapSizeOptions.FromEmptyOptions();
+            bitmapSource = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(hBitmap, IntPtr.Zero, Int32Rect.Empty, sizeOptions);
+            bitmapSource.Freeze();
+
+
+            return bitmapSource;
+        }
+        //bmp to byteArr
+        byte[] ConvertBitmapToByteArray(Bitmap bitmap)
+        {
+            byte[] result = null;
+            if (bitmap != null)
+            {
+                MemoryStream stream = new MemoryStream();
+                bitmap.Save(stream, bitmap.RawFormat);
+                result = stream.ToArray();
+            }
+            else
+            {
+                Console.WriteLine("Bitmap is null.");
+            }
+            return result;
         }
     }
 }

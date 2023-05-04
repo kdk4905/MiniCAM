@@ -1,0 +1,13 @@
+﻿<Window x:Class="BmpTest.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:BmpTest"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+    <Grid>
+        <Image Name="ImgTest" Width="10" Height="10" Source="C:\Users\REDT_DEV\Desktop\work\MiniCAM\TestImage.bmp"/>
+        <Button Width="100" Height="100" Content="Button" Margin="10,10,690,324" Click="Button_Click"/>
+    </Grid>
+</Window>

@@ -11,6 +11,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "솔루션 항목", "솔루�
 		프로젝트 관련 메모.txt = 프로젝트 관련 메모.txt
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "테스트", "테스트", "{BECB0419-80AE-4017-B2BF-893549F4E614}"
+	ProjectSection(SolutionItems) = preProject
+		TestImage.bmp = TestImage.bmp
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BmpTest", "BmpTest\BmpTest.csproj", "{8110BF6D-12D9-4BE9-BF9F-9CA15875FD54}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,9 +28,17 @@ Global
 		{BEB9C158-3BF7-4C0C-911E-42BF0E1AEEA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BEB9C158-3BF7-4C0C-911E-42BF0E1AEEA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BEB9C158-3BF7-4C0C-911E-42BF0E1AEEA4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8110BF6D-12D9-4BE9-BF9F-9CA15875FD54}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8110BF6D-12D9-4BE9-BF9F-9CA15875FD54}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8110BF6D-12D9-4BE9-BF9F-9CA15875FD54}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8110BF6D-12D9-4BE9-BF9F-9CA15875FD54}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{BECB0419-80AE-4017-B2BF-893549F4E614} = {559CCB9D-8B68-4A0E-A384-C85FA3150268}
+		{8110BF6D-12D9-4BE9-BF9F-9CA15875FD54} = {BECB0419-80AE-4017-B2BF-893549F4E614}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D2A95542-8440-40BC-9655-552B5704CCFC}
