@@ -4,11 +4,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.IO.Ports;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -23,13 +25,34 @@ namespace MiniCAM
     {
         Queue Data = new Queue(); //데이터 저장 큐
         SerialPort sp = new SerialPort();
+        // 리스트
+        // HTMP
         List<string> Order = new List<string>();
+        // toolPathData
+        List<List<Point>> toolPathData = new List<List<Point>>();
+        // toolPathRowManager
+        List<Point> toolPathRowManager = new List<Point>();
+        // toolPathColumnManager
+        List<Point> toolPathColumnManager = new List<Point>();
+        // toolPathManager
+        List<List<toolPathHatchingLine>> toolPathManager = new List<List<toolPathHatchingLine>>();
+        // HatchingManager
+        List<List<List<toolPathHatchingLine>>> HatchingManager = new List<List<List<toolPathHatchingLine>>>(); 
         string T_msg = ""; //WPF Text 저장용
+        // bool
         bool IsSpOpen;
         // CNC 이미지
         System.Windows.Controls.Image myImage;
         // Bitmap 이미지
-        // Color 구조체
+        // 구조체
+        // Point
+        struct toolPathHatchingLine
+        {
+            public Point Start;
+            public Point End;
+        }
+
+        // Color
         System.Drawing.Color color;
         // rgb 변수
         int rgb;
@@ -113,26 +136,38 @@ namespace MiniCAM
             {
                 if (File.Exists(openDialog.FileName))
                 {
-                    Stream imageStreamSource = new FileStream(openDialog.FileName, FileMode.Open, FileAccess.Read, FileShare.Read);
-                    PngBitmapDecoder decoder = new PngBitmapDecoder(imageStreamSource, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.Default);
-                    BitmapSource bitmapSource = decoder.Frames[0];
-
                     // 비트맵 이미지
-                    Bitmap bmp = new Bitmap(GetBitmapFromBitmapSource(bitmapSource));
+                    System.Drawing.Image img = System.Drawing.Image.FromFile(openDialog.FileName);
+                    img.Save("image.bmp", ImageFormat.Bmp);
+                    Bitmap bmp = new Bitmap(img);
                     // Hatch를 위한 배열
                     Hatch = new int[bmp.Width, bmp.Height];
-                    for (int w = 0; w < bmp.Width; w++)
+                    bool flag = false;
+                    toolPathHatchingLine tpp;
+                    tpp.Start = new Point(0,0);
+                    tpp.End = new Point(0, 0);
+                    Point CurrentPoint = new Point(0,0);
+                    bool makeHatchLine;
+                    for (int h = 0; h < bmp.Height; h++)
                     {
-                        for (int h = 0; h < bmp.Height; h++)
+                        for (int w = 0; w < bmp.Width; w++)
                         {
                             color = bmp.GetPixel(w, h);
                             rgb = (color.R + color.G + color.B) / 3;
                             //Point bmpPoint = new Point(w, h);
                             //bmpPixelPoint.Add(bmpPoint);
                             //gray rgb(128,128,128)
-                            if (rgb > (128+128+128 / 3))
+                            if (rgb > ((128+128+128) / 3))
                             {
                                 bmp.SetPixel(w, h, System.Drawing.Color.White);
+                                // 흰 영역을 만났을때
+                                // 직전 영역(Current)을 tpp.End에 저장
+                                if (flag)
+                                {
+                                        tpp.End = CurrentPoint;
+                                        flag = false;
+                                        toolPathManager.Add(new List<toolPathHatchingLine> { tpp });
+                                }
                             }
                             else
                             {
@@ -140,22 +175,41 @@ namespace MiniCAM
                                 Hatch[w,h] = 1;
                                 int z = 100;
                                 string aa = makeToolpath(w.ToString(), h.ToString(), z.ToString());
-                                Console.WriteLine(aa);
-                                Debug.WriteLine(aa);
-                                Order.Add(aa);
+                                //Console.WriteLine(aa);
+                                //Debug.WriteLine(aa);
+                                //Order.Add(aa);
+                                // 검은색 영역을 만났을 때
+                                if (!flag)
+                                {
+                                    // 해칭라인 Row 0, Column 0
+                                        tpp.Start = new Point(w, h);
+                                        flag = true;
+                                }
+                                else
+                                {
+                                    CurrentPoint.X = w;
+                                    CurrentPoint.Y = h;
+                                    continue;
+                                }
                             }
                         }
                     } // bmp 이미지 이진화 완료
+                    //HatchingManager.Add(new List<List<List<toolPathHatchingLine>>> { toolPathManager });
+                    //int row, col = 0;
+                    foreach (List<toolPathHatchingLine> item in toolPathManager)
+                    {
+                        Console.WriteLine(item.Count);
+                    }
 
                     //CNC 할 이미지
                     myImage = new System.Windows.Controls.Image();
-                    myImage.Source = bitmapSource;
+                    //myImage.Source = bitmapSource;
                     myImage.Width = 500;
                     myImage.Height = 500;
                     //화면에 보여줄 이미지
 
                     System.Windows.Controls.Image preImage = new System.Windows.Controls.Image();
-                    preImage.Source = bitmapSource;
+                    //preImage.Source = bitmapSource;
                     preImage.Width = 200;
                     preImage.Height = 200;
 
