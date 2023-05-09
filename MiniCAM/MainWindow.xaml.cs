@@ -138,7 +138,7 @@ namespace MiniCAM
                 {
                     // 비트맵 이미지
                     System.Drawing.Image img = System.Drawing.Image.FromFile(openDialog.FileName);
-                    img.Save("image.bmp", ImageFormat.Bmp);
+                    //img.Save("image.bmp", ImageFormat.Bmp);
                     Bitmap bmp = new Bitmap(img);
                     // Hatch를 위한 배열
                     Hatch = new int[bmp.Width, bmp.Height];
@@ -146,7 +146,7 @@ namespace MiniCAM
                     toolPathHatchingLine tpp;
                     tpp.Start = new Point(0,0);
                     tpp.End = new Point(0, 0);
-                    Point CurrentPoint = new Point(0,0);
+                    Point Current = new Point(0,0);
                     bool makeHatchLine;
                     for (int h = 0; h < bmp.Height; h++)
                     {
@@ -164,7 +164,7 @@ namespace MiniCAM
                                 // 직전 영역(Current)을 tpp.End에 저장
                                 if (flag)
                                 {
-                                        tpp.End = CurrentPoint;
+                                        tpp.End = Current;
                                         flag = false;
                                         toolPathManager.Add(new List<toolPathHatchingLine> { tpp });
                                 }
@@ -187,15 +187,15 @@ namespace MiniCAM
                                 }
                                 else
                                 {
-                                    CurrentPoint.X = w;
-                                    CurrentPoint.Y = h;
+                                    Current = new Point(w,h);
                                     continue;
                                 }
                             }
                         }
                     } // bmp 이미지 이진화 완료
-                    //HatchingManager.Add(new List<List<List<toolPathHatchingLine>>> { toolPathManager });
-                    //int row, col = 0;
+                      //HatchingManager.Add(new List<List<List<toolPathHatchingLine>>> { toolPathManager });
+                      //int row, col = 0;
+                      // 리스트의 데이터 확인
                     foreach (List<toolPathHatchingLine> item in toolPathManager)
                     {
                         Console.WriteLine(item.Count);
@@ -209,7 +209,7 @@ namespace MiniCAM
                     //화면에 보여줄 이미지
 
                     System.Windows.Controls.Image preImage = new System.Windows.Controls.Image();
-                    //preImage.Source = bitmapSource;
+                    preImage.Source = GetBitmapSourceFromBitmap(bmp);
                     preImage.Width = 200;
                     preImage.Height = 200;
 
@@ -229,25 +229,138 @@ namespace MiniCAM
         {
             //string order = "VS36;\r\n!ZZ-55,-165,-200;\r\n!ZZ-55,-165,-200;\r\n!ZZ-55,-165,-200;\r\nVS24;\r\n!ZZ-55,-165,100;\r\n!ZZ-8,-165,100;\r\n!ZZ-21,-165,100;\r\n!ZZ-21,-115,100;\r\n!ZZ-74,-115,100;\r\n!ZZ-74,-65,100;\r\n!ZZ-93,-65,100;\r\n!ZZ-39,-65,100;\r\n!ZZ-58,-65,100;\r\n!ZZ-58,-15,100;\r\n!ZZ-112,-15,100;\r\n!ZZ-112,35,100;\r\n!ZZ-132,35,100;\r\n!ZZ-76,35,100;\r\n!ZZ-94,35,100;\r\n!ZZ-94,85,100;\r\n!ZZ-151,85,100;\r\n!ZZ-151,135,100;\r\n!ZZ-170,135,100;\r\n!ZZ-112,135,100;\r\n!ZZ-130,135,100;\r\n!ZZ-130,185,100;\r\n!ZZ-189,185,100;\r\nVS36;\r\n!ZZ-189,185,-200;\r\n!ZZ87,85,-200;\r\nVS24;\r\n!ZZ87,85,100;\r\n!ZZ148,85,100;\r\n!ZZ148,135,100;\r\n!ZZ168,135,100;\r\n!ZZ106,135,100;\r\n!ZZ125,135,100;\r\n!ZZ125,185,100;\r\n!ZZ189,185,100;\r\nVS36;\r\n!ZZ189,185,-200;\r\n!ZZ45,-165,-200;\r\nVS24;\r\n!ZZ45,-165,100;\r\n!ZZ-5,-165,100;\r\n!ZZ11,-165,100;\r\n!ZZ11,-115,100;\r\n!ZZ66,-115,100;\r\n!ZZ66,-65,100;\r\n!ZZ86,-65,100;\r\n!ZZ30,-65,100;\r\n!ZZ49,-65,100;\r\n!ZZ49,-15,100;\r\n!ZZ107,-15,100;\r\n!ZZ107,35,100;\r\n!ZZ127,35,100;\r\n!ZZ68,35,100;\r\nVS36;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!VO;";
             //Order.Add(order);
+            Point Start, Current;
+            int row = 0;
+            int col = 0;
+            int UpZ = -80;
+            int DownZ = 100;
+            bool LeftToRight;
+
+            #region 첫 데이터 그리기
+            Start = toolPathManager[row][col].Start;
+            Current = toolPathManager[row][col].End;
+            string ToolUpStart = makeToolpath(Start.X.ToString(), Start.Y.ToString(), UpZ.ToString());
+            string ToolUpEnd = makeToolpath(Current.X.ToString(), Current.Y.ToString(), UpZ.ToString());
+            string StartP = makeToolpath(Start.X.ToString(), Start.Y.ToString(), DownZ.ToString());
+            string EndP = makeToolpath(Current.X.ToString(), Current.Y.ToString(), DownZ.ToString());
+            // 첫 좌표 공구 이동
+            Order.Add("VS30;");
+            Order.Add(ToolUpStart);
+            Order.Add(ToolUpStart);
+            Order.Add(ToolUpStart);
+            // 첫 좌표 공구 내리기
+            Order.Add("VS24;");
+            Order.Add(StartP);
+
+            // 첫 공구 이동
+            Order.Add("VS36");
+            Order.Add(StartP);
+            Order.Add(EndP);
+            LeftToRight = false;
+            #endregion
+
+            while (toolPathManager.Count != 0)
+            {
+                int toolPathManagerCount = toolPathManager.Count;
+                // Y값 만큼 공구 이동
+                if (row < toolPathManagerCount)
+                {
+                        row = 10;
+                        Start = toolPathManager[row][col].Start;
+                        Current = toolPathManager[row][col].End;
+                        StartP = makeToolpath(Start.X.ToString(), Start.Y.ToString(), DownZ.ToString());
+                        EndP = makeToolpath(Current.X.ToString(), Current.Y.ToString(), DownZ.ToString());
+                    //오른쪽 -> 왼쪽
+                    if (!LeftToRight)
+                    {
+                        Order.Add(StartP);
+                        Order.Add(EndP);
+                        LeftToRight = true;
+                    }
+                    else
+                    {
+                        Order.Add(EndP);
+                        Order.Add(StartP);
+                        LeftToRight = false;
+                    }
+                }
+                else
+                {
+                    if (toolPathManagerCount <= 10)
+                    {
+                        row = toolPathManagerCount-1;
+                        Start = toolPathManager[row][col].Start;
+                        Current = toolPathManager[row][col].End;
+                        StartP = makeToolpath(Start.X.ToString(), Start.Y.ToString(), DownZ.ToString());
+                        EndP = makeToolpath(Current.X.ToString(), Current.Y.ToString(), DownZ.ToString());
+                        ToolUpStart = makeToolpath(Start.X.ToString(), Start.Y.ToString(), UpZ.ToString());
+                        ToolUpEnd = makeToolpath(Current.X.ToString(), Current.Y.ToString(), UpZ.ToString());
+                        //오른쪽 -> 왼쪽
+                        if (!LeftToRight)
+                        {
+                            Order.Add(StartP);
+                            Order.Add(EndP);
+                            LeftToRight = true;
+                            Order.Add(ToolUpEnd);
+                            Order.Add(ToolUpEnd);
+                            Order.Add(ToolUpEnd);
+                            row += 1;
+                        }
+                        else
+                        {
+                            Order.Add(EndP);
+                            Order.Add(StartP);
+                            LeftToRight = false;
+                            Order.Add(ToolUpStart);
+                            Order.Add(ToolUpStart);
+                            Order.Add(ToolUpStart);
+                            row += 1;
+                        }
+                    }
+                    else
+                    {
+                        row = toolPathManagerCount;
+                        Start = toolPathManager[row][col].Start;
+                        Current = toolPathManager[row][col].End;
+                        StartP = makeToolpath(Start.X.ToString(), Start.Y.ToString(), DownZ.ToString());
+                        EndP = makeToolpath(Current.X.ToString(), Current.Y.ToString(), DownZ.ToString());
+                        //오른쪽 -> 왼쪽
+                        if (!LeftToRight)
+                        {
+                            Order.Add(StartP);
+                            Order.Add(EndP);
+                            LeftToRight = true;
+                        }
+                        else
+                        {
+                            Order.Add(EndP);
+                            Order.Add(StartP);
+                            LeftToRight = false;
+                        }
+                    }
+                }
+                // 전의 데이터 삭제
+                toolPathManager.RemoveRange(0, row);
+            }
+
+            Order.Add("!VO;");
+
             for (int i = 0; i < Order.Count; i++)
             {
                 sp.WriteLine(Order[i]);
             }
-            sp.WriteLine("!VO;");
             //string order = "IN;!ZC320;\r\n!CL1;\r\n!PM0,0;\r\n!ZC200;!MH-189,-164,377,349,0,2,1,1,1;\r\n!MH-189,-164,377,349,0,1,0,1,1;\r\n!SR0;\r\nVS36;\r\n!ZZ-55,-165,-200;\r\n!ZZ-55,-165,-200;\r\n!ZZ-55,-165,-200;\r\nVS24;\r\n!ZZ-55,-165,100;\r\n!ZZ-8,-165,100;\r\n!ZZ-21,-165,100;\r\n!ZZ-21,-115,100;\r\n!ZZ-74,-115,100;\r\n!ZZ-74,-65,100;\r\n!ZZ-93,-65,100;\r\n!ZZ-39,-65,100;\r\n!ZZ-58,-65,100;\r\n!ZZ-58,-15,100;\r\n!ZZ-112,-15,100;\r\n!ZZ-112,35,100;\r\n!ZZ-132,35,100;\r\n!ZZ-76,35,100;\r\n!ZZ-94,35,100;\r\n!ZZ-94,85,100;\r\n!ZZ-151,85,100;\r\n!ZZ-151,135,100;\r\n!ZZ-170,135,100;\r\n!ZZ-112,135,100;\r\n!ZZ-130,135,100;\r\n!ZZ-130,185,100;\r\n!ZZ-189,185,100;\r\nVS36;\r\n!ZZ-189,185,-200;\r\n!ZZ87,85,-200;\r\nVS24;\r\n!ZZ87,85,100;\r\n!ZZ148,85,100;\r\n!ZZ148,135,100;\r\n!ZZ168,135,100;\r\n!ZZ106,135,100;\r\n!ZZ125,135,100;\r\n!ZZ125,185,100;\r\n!ZZ189,185,100;\r\nVS36;\r\n!ZZ189,185,-200;\r\n!ZZ45,-165,-200;\r\nVS24;\r\n!ZZ45,-165,100;\r\n!ZZ-5,-165,100;\r\n!ZZ11,-165,100;\r\n!ZZ11,-115,100;\r\n!ZZ66,-115,100;\r\n!ZZ66,-65,100;\r\n!ZZ86,-65,100;\r\n!ZZ30,-65,100;\r\n!ZZ49,-65,100;\r\n!ZZ49,-15,100;\r\n!ZZ107,-15,100;\r\n!ZZ107,35,100;\r\n!ZZ127,35,100;\r\n!ZZ68,35,100;\r\nVS36;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!VO;\r\n";
             //sp.WriteLine(order);
         }
 
         private void initToolpath() 
         {
-            Order.Add("IN;!ZC320;");
+            Order.Add("IN;");
             Order.Add("!CL1;");
             Order.Add("!PM0,0;");
-            Order.Add("!ZC200;!MH-189,-164,500,500,0,2,1,1,1;");
-            Order.Add("!MH-189,-164,500,500,0,1,0,1,1;");
+            Order.Add("!MH153,187,303,252,0,2,1,1,1;");
+            Order.Add("!MH153,187,303,252,0,1,0,1,1;");
             Order.Add("!SR0;");
-            Order.Add("!VS36;");
-            //Order.Add("!MH-189,-164,377,349,0,1,0,1,1;");//소재 위치 체크
         }
 
         private string makeToolpath(string w, string h , string z) 
