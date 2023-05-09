@@ -4,14 +4,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.IO.Ports;
 using System.Threading;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Point = System.Drawing.Point;
@@ -33,11 +29,10 @@ namespace MiniCAM
         // toolPathRowManager
         List<Point> toolPathRowManager = new List<Point>();
         // toolPathColumnManager
-        List<Point> toolPathColumnManager = new List<Point>();
         // toolPathManager
         List<List<toolPathHatchingLine>> toolPathManager = new List<List<toolPathHatchingLine>>();
         // HatchingManager
-        List<List<List<toolPathHatchingLine>>> HatchingManager = new List<List<List<toolPathHatchingLine>>>(); 
+        List<List<List<toolPathHatchingLine>>> HatchingManager = new List<List<List<toolPathHatchingLine>>>();
         string T_msg = ""; //WPF Text 저장용
         // bool
         bool IsSpOpen;
@@ -59,14 +54,14 @@ namespace MiniCAM
         // bmp의 좌표
         int[,] Hatch;
 
-        List<Point>bmpPixelPoint = new List<Point>();
+        List<Point> bmpPixelPoint = new List<Point>();
 
         public MainWindow()
         {
             InitializeComponent();
             cbx_Port.ItemsSource = SerialPort.GetPortNames();
             initToolpath();
-            
+
             Thread t = new Thread(text);
             t.IsBackground = true;
             t.Start();
@@ -144,57 +139,91 @@ namespace MiniCAM
                     Hatch = new int[bmp.Width, bmp.Height];
                     bool flag = false;
                     toolPathHatchingLine tpp;
-                    tpp.Start = new Point(0,0);
+                    tpp.Start = new Point(0, 0);
                     tpp.End = new Point(0, 0);
-                    Point Current = new Point(0,0);
-                    int hatchInterval = 20;
+                    Point Current = new Point(0, 0);
+                    int hatchInterval = 10;
                     int tempY = 0;
                     int count = 0;
+                    // 해칭 이미지
+                    // column을 저장할 리스트
+                    List<toolPathHatchingLine> toolPathColumnManager = new List<toolPathHatchingLine>();
                     for (int h = 0; h < bmp.Height; h++)
                     {
                         for (int w = 0; w < bmp.Width; w++)
                         {
                             color = bmp.GetPixel(w, h);
                             rgb = (color.R + color.G + color.B) / 3;
-                            if (rgb > ((128+128+128) / 3))
+                            if (rgb > ((128 + 128 + 128) / 3))
                             {
                                 bmp.SetPixel(w, h, System.Drawing.Color.White);
                                 // 흰 영역을 만났을때
                                 // 직전 영역(Current)을 tpp.End에 저장
-                                if (flag)
+
+                                // Column 생성
+                                if (w == ((bmp.Width) - 1))
                                 {
+                                    if (flag)
+                                    {
                                         tpp.End = Current;
                                         flag = false;
-                                        toolPathManager.Add(new List<toolPathHatchingLine> { tpp });
+                                        toolPathManager.Add(toolPathColumnManager);
+
+                                    }
+                                }
+                                // 해칭 영역의 끝일 때
+                                // Column 추가
+                                else
+                                {
+                                    if (flag)
+                                    {
+                                        tpp.End = Current;
+                                        flag = false;
+                                        toolPathColumnManager.Add(tpp);
+                                        Debug.WriteLine(w);
+                                    }
                                 }
                             }
                             else
                             {
                                 bmp.SetPixel(w, h, System.Drawing.Color.Black);
-                                Hatch[w,h] = 1;
+                                Hatch[w, h] = 1;
                                 // 검은색 영역을 만났을 때
-                                if ((!flag) && (count == 0))
+                                // 영역 탐색 진행중
+                                if (w == ((bmp.Width) - 1))
                                 {
-                                    tpp.Start = new Point(w, h);
-                                    flag = true;
-                                    count++;
-                                    tempY = h;
-                                    tempY += hatchInterval;
+                                    Current = new Point(w, h);
+                                    continue;
                                 }
-                                else if ((!flag) && (count != 0))
-                                {
-                                    if (h == tempY)
-                                    {
-                                        // 해칭라인 Row 0, Column 0
-                                        tpp.Start = new Point(w, h);
-                                        flag = true;
-                                        tempY += hatchInterval;
-                                    }
-                                }
+                                // 영역 탐색 끝
+                                // 만약 검은색 점이 있었다면
                                 else
                                 {
-                                    Current = new Point(w,h);
-                                    continue;
+                                    // Row0, StarPoint
+                                    if ((!flag) && (count == 0))
+                                    {
+                                        tpp.Start = new Point(w, h);
+                                        flag = true;
+                                        count++;
+                                        tempY = h;
+                                    }
+                                    // Row1 ~ Row 끝, StartPoint
+                                    else if ((!flag) && (count != 0))
+                                    {
+                                        if (h == tempY)
+                                        {
+                                            // 해칭라인 Row 0,
+                                            // 다음 컬럼
+                                            // startPoin 만들기
+                                            tpp.Start = new Point(w, h);
+                                            flag = true;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Current = new Point(w, h);
+                                        continue;
+                                    }
                                 }
                             }
                         }
@@ -204,6 +233,7 @@ namespace MiniCAM
                       // 리스트의 데이터 확인
                     foreach (List<toolPathHatchingLine> item in toolPathManager)
                     {
+
                         Console.WriteLine(item.Count);
                     }
 
@@ -245,7 +275,7 @@ namespace MiniCAM
             #region 첫 데이터 그리기
             Start = toolPathManager[row][col].Start;
             Current = toolPathManager[row][col].End;
-            NextStart = toolPathManager[row+1][col].Start;
+            NextStart = toolPathManager[row + 1][col].Start;
             NextEnd = toolPathManager[row][col].End;
 
             string ToolUpStart = makeToolpath(Start, UpZ);
@@ -310,7 +340,7 @@ namespace MiniCAM
                     //오른쪽 -> 왼쪽
                     if (!LeftToRight)
                     {
-                        MoveVertical = new Point(Current.X,NextEnd.Y);
+                        MoveVertical = new Point(Current.X, NextEnd.Y);
                         string ToolMoveVertical = makeToolpath(MoveVertical, DownZ);
                         Order.Add(ToolMoveVertical);
                         Start = toolPathManager[row][col].Start;
@@ -364,7 +394,7 @@ namespace MiniCAM
             //sp.WriteLine(order);
         }
 
-        private void initToolpath() 
+        private void initToolpath()
         {
             Order.Add("IN;");
             Order.Add("!CL1;");
@@ -374,7 +404,7 @@ namespace MiniCAM
             Order.Add("!SR0;");
         }
 
-        private string makeToolpath(Point point, int z) 
+        private string makeToolpath(Point point, int z)
         {
             Point _point = point;
             string x = point.X.ToString() + ",";
