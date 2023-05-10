@@ -27,7 +27,6 @@ namespace MiniCAM
         List<List<Point>> toolPathData = new List<List<Point>>();
         // toolPathRowManager
         List<Point> toolPathRowManager = new List<Point>();
-
         // toolPathManager
         List<List<toolPathHatchingLine>> toolPathManager = new List<List<toolPathHatchingLine>>();
         // HatchingManager
@@ -142,7 +141,7 @@ namespace MiniCAM
                     tpp.Start = new Point(0, 0);
                     tpp.End = new Point(0, 0);
                     Point Current = new Point(0, 0);
-                    int hatchInterval = 20;
+                    int hatchInterval = 50;
                     int tempY = 0;
                     int count = 0;
                     int colCount = 0;
@@ -267,17 +266,36 @@ namespace MiniCAM
         {
             //string order = "VS36;\r\n!ZZ-55,-165,-200;\r\n!ZZ-55,-165,-200;\r\n!ZZ-55,-165,-200;\r\nVS24;\r\n!ZZ-55,-165,100;\r\n!ZZ-8,-165,100;\r\n!ZZ-21,-165,100;\r\n!ZZ-21,-115,100;\r\n!ZZ-74,-115,100;\r\n!ZZ-74,-65,100;\r\n!ZZ-93,-65,100;\r\n!ZZ-39,-65,100;\r\n!ZZ-58,-65,100;\r\n!ZZ-58,-15,100;\r\n!ZZ-112,-15,100;\r\n!ZZ-112,35,100;\r\n!ZZ-132,35,100;\r\n!ZZ-76,35,100;\r\n!ZZ-94,35,100;\r\n!ZZ-94,85,100;\r\n!ZZ-151,85,100;\r\n!ZZ-151,135,100;\r\n!ZZ-170,135,100;\r\n!ZZ-112,135,100;\r\n!ZZ-130,135,100;\r\n!ZZ-130,185,100;\r\n!ZZ-189,185,100;\r\nVS36;\r\n!ZZ-189,185,-200;\r\n!ZZ87,85,-200;\r\nVS24;\r\n!ZZ87,85,100;\r\n!ZZ148,85,100;\r\n!ZZ148,135,100;\r\n!ZZ168,135,100;\r\n!ZZ106,135,100;\r\n!ZZ125,135,100;\r\n!ZZ125,185,100;\r\n!ZZ189,185,100;\r\nVS36;\r\n!ZZ189,185,-200;\r\n!ZZ45,-165,-200;\r\nVS24;\r\n!ZZ45,-165,100;\r\n!ZZ-5,-165,100;\r\n!ZZ11,-165,100;\r\n!ZZ11,-115,100;\r\n!ZZ66,-115,100;\r\n!ZZ66,-65,100;\r\n!ZZ86,-65,100;\r\n!ZZ30,-65,100;\r\n!ZZ49,-65,100;\r\n!ZZ49,-15,100;\r\n!ZZ107,-15,100;\r\n!ZZ107,35,100;\r\n!ZZ127,35,100;\r\n!ZZ68,35,100;\r\nVS36;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!ZZ68,35,-200;\r\n!VO;";
             //Order.Add(order);
-            Point Start, Current, NextStart, NextEnd, MoveVertical;
+            Point Start, Current, NextStart, NextEnd, moveToolPoint;
+            List<toolPathHatchingLine> toolPathRowManager = new List<toolPathHatchingLine>();
+            toolPathHatchingLine tpp;
             int row = 0;
             int col = 0;
             int UpZ = -80;
             int DownZ = 100;
+            // 왼쪽에서 오른쪽
+            // 오른쪽에서 왼쪽
+            // 제어하는 flag
             bool LeftToRight;
 
+            // 공구를 내렸을때
+            // 해칭 그리기가
+            // 끝났는지
+            bool isDrawFinished;
+
             #region 첫 데이터 그리기
+            // 첫 데이터
+            // row 0, col 0
             Start = toolPathManager[row][col].Start;
             Current = toolPathManager[row][col].End;
-            NextStart = toolPathManager[row + 1][col].Start;
+            tpp.Start = Start;
+            tpp.End = Current;
+            toolPathRowManager.Add(tpp);
+
+            // 두번째 데이터
+            // 맨 왼쪽
+            // row 1, col 0
+            NextStart = toolPathManager[row][col].Start;
             NextEnd = toolPathManager[row][col].End;
 
             string ToolUpStart = makeToolpath(Start, UpZ);
@@ -297,13 +315,20 @@ namespace MiniCAM
             Order.Add("VS36");
             Order.Add(StartP);
             Order.Add(EndP);
+            // 첫라인
+            // Left -> Right 수행
+            // flag -> false
             LeftToRight = false;
             #endregion
 
+            // 데이터를 소진하면서
+            // 툴패스를 그림
             while (toolPathManager.Count != 0)
             {
                 int toolPathManagerCount = toolPathManager.Count;
                 // Y값 만큼 공구 이동
+                // 리스트에 row가
+                // 하나만 남았을 때
                 if (toolPathManagerCount == 1)
                 {
                     row = 0;
@@ -333,17 +358,170 @@ namespace MiniCAM
                         Order.Add(ToolUpStart);
                     }
                 }
+                //해칭 그리기 시작
                 else
                 {
                     //다음 데이터를 가져오기 위한 row
                     row = 1;
+                    // col이 여러개 일때
+                    if (toolPathManager[row].Count > 1)
+                    {
+                        int count = toolPathManager[row].Count;
+                        for (int i = 0; i < count; i++)
+                        {
+                           NextStart = toolPathManager[row][i].Start;
+                           NextEnd = toolPathManager[row][i].End;
+                            // 다음 라인의 X값이
+                            // 현재 끝점의 X값 
+                            // 사이에 있을때
+                            bool chkmeetline = checkMeetLine(Start, Current, NextStart, NextEnd);
+                            if (NextStart.X <= Current.X && Current.X <= NextEnd.X)
+                            {
+                                //공구를 내리고
+                                //NextEnd로 이동을 한다
+                                //오른쪽 -> 왼쪽
+                                if (!LeftToRight)
+                                {
+                                    moveToolPoint = new Point(Current.X, NextEnd.Y);
+                                    string ToolMoveVertical = makeToolpath(moveToolPoint, DownZ);
+                                    Order.Add(ToolMoveVertical);
+                                    Start = toolPathManager[row][col].Start;
+                                    Current = toolPathManager[row][col].End;
+                                    StartP = makeToolpath(Start, DownZ);
+                                    EndP = makeToolpath(Current, DownZ);
+                                    Order.Add(EndP);
+                                    Order.Add(StartP);
+                                    LeftToRight = true;
+                                }
+                                //왼쪽 -> 오른쪽
+                                else if (LeftToRight)
+                                {
+                                    moveToolPoint = new Point(Start.X, NextStart.Y);
+                                    string ToolMoveVertical = makeToolpath(moveToolPoint, DownZ);
+                                    Order.Add(ToolMoveVertical);
+                                    Start = toolPathManager[row][col].Start;
+                                    Current = toolPathManager[row][col].End;
+                                    StartP = makeToolpath(Start, DownZ);
+                                    EndP = makeToolpath(Current, DownZ);
+                                    Order.Add(StartP);
+                                    Order.Add(EndP);
+                                    LeftToRight = false;
+                                }
+                                //왼쪽 -> 오른쪽
+                                else
+                                {
+                                    Order.Add(StartP);
+                                    Order.Add(EndP);
+                                    LeftToRight = false;
+                                }
+                            }
+                            // 다음 라인의 X값이
+                            // 현재 끝점의 X값
+                            // 사이에 없을때
+                            // 공구를 내려서 그릴 수 있는지
+                            // 교점을 구해본다
+                            else if (chkmeetline)
+                            {
+                                // 교점을 구해보고
+                                // 가능하면
+                                // 공구를
+                                // 다음 라인의
+                                // 끝의 X로 보내고
+                                // 라인을 그린다
+                                if (!LeftToRight)
+                                {
+                                    //공구를 움직인다
+                                    //Current.X, Current.Y
+                                    //-> NextEnd.X, Current.Y
+                                    moveToolPoint = new Point(NextEnd.X, Current.Y);
+                                    string moveTool = makeToolpath(moveToolPoint, DownZ);
+                                    Order.Add(moveTool);
+                                    //공구를 내린다
+                                    //NextEnd.X, Current.Y
+                                    //-> NextEnd.X, NextEnd.Y
+                                    moveToolPoint = new Point(NextEnd.X, NextEnd.Y);
+                                    moveTool = makeToolpath(moveToolPoint, DownZ);
+                                    Order.Add(moveTool);
+                                    //R -> L
+                                    Start = toolPathManager[row][col].Start;
+                                    Current = toolPathManager[row][col].End;
+                                    StartP = makeToolpath(Start, DownZ);
+                                    EndP = makeToolpath(Current, DownZ);
+                                    Order.Add(EndP);
+                                    Order.Add(StartP);
+                                    LeftToRight = true;
+                                }
+                                //왼쪽 -> 오른쪽
+                                else if (LeftToRight)
+                                {
+                                    //공구를 움직인다
+                                    //Start.X, Start.Y
+                                    //-> NextStart.X, Start.Y
+                                    moveToolPoint = new Point(NextStart.X, Start.Y);
+                                    string moveTool = makeToolpath(moveToolPoint, DownZ);
+                                    Order.Add(moveTool);
+                                    //공구를 내린다
+                                    //NextSTart.X, Start.Y
+                                    //-> NextStart.X, NextStart.Y
+                                    moveToolPoint = new Point(NextStart.X, NextStart.Y);
+                                    moveTool = makeToolpath(moveToolPoint, DownZ);
+                                    Order.Add(moveTool);
+                                    // L -> R
+                                    Start = toolPathManager[row][col].Start;
+                                    Current = toolPathManager[row][col].End;
+                                    StartP = makeToolpath(Start, DownZ);
+                                    EndP = makeToolpath(Current, DownZ);
+                                    Order.Add(StartP);
+                                    Order.Add(EndP);
+                                    LeftToRight = false;
+                                }
+                                /* if문이
+                                 * LeftToRight로
+                                 * 제어가 되고 있으므로
+                                 * else 안탐
+                                // 공구를 든다
+                                else
+                                {
+                                    Order.Add(StartP);
+                                    Order.Add(EndP);
+                                    LeftToRight = false;
+                                }
+                                */
+                            }
+                            // 현재 공구의 위치에서는
+                            // 다음 라인을 그릴수 없으므로
+                            // 공구를 든다
+                            // 공구를 들때는
+                            // 1. Y 간격 값이 크거나
+                            // > 데이터 수집시 해결
+                            // 2. 더이상 그릴 수 없거나
+                            // 3. 더이상 그릴 게 없거나
+                            else 
+                            {
+                                if (!LeftToRight) 
+                                {
+                                    isDrawFinished = true;
+                                    moveToolPoint = Start;
+                                }
+                                else 
+                                {
+                                    isDrawFinished = true;
+                                    moveToolPoint = Current;
+                                }
+                            }
+                        }
+                        foreach (Point item in toolPathRowManager)
+                        {
+                            Console.WriteLine(toolPathRowManager.Count);
+                        }
+                    }
                     NextStart = toolPathManager[row][col].Start;
                     NextEnd = toolPathManager[row][col].End;
                     //오른쪽 -> 왼쪽
                     if (!LeftToRight)
                     {
-                        MoveVertical = new Point(Current.X, NextEnd.Y);
-                        string ToolMoveVertical = makeToolpath(MoveVertical, DownZ);
+                        moveToolPoint = new Point(Current.X, NextEnd.Y);
+                        string ToolMoveVertical = makeToolpath(moveToolPoint, DownZ);
                         Order.Add(ToolMoveVertical);
                         Start = toolPathManager[row][col].Start;
                         Current = toolPathManager[row][col].End;
@@ -356,8 +534,8 @@ namespace MiniCAM
                     //왼쪽 -> 오른쪽
                     else if (LeftToRight)
                     {
-                        MoveVertical = new Point(Start.X, NextStart.Y);
-                        string ToolMoveVertical = makeToolpath(MoveVertical, DownZ);
+                        moveToolPoint = new Point(Start.X, NextStart.Y);
+                        string ToolMoveVertical = makeToolpath(moveToolPoint, DownZ);
                         Order.Add(ToolMoveVertical);
                         Start = toolPathManager[row][col].Start;
                         Current = toolPathManager[row][col].End;
@@ -414,6 +592,42 @@ namespace MiniCAM
             string _z = z.ToString();
             string toolpath = "!ZZ" + x + y + z;
             return toolpath;
+        }
+
+        //두점 사이의 개수
+        private bool checkMeetLine(Point start, Point end, Point nextstart, Point nextend) 
+        {
+            //x1,y1
+            Point AP1= start;
+            //x2,y2
+            Point AP2 = end;
+            //x3,y3
+            Point BP1 = nextstart;
+            //x4,y4
+            Point BP2 = nextend;
+            double t;
+            double s;
+            // 분모
+            double under = (BP2.Y - BP1.Y) * (AP2.X - AP1.X) - (BP2.X - BP1.X) * (AP2.Y - AP1.Y);
+            if (under == 0)
+                return false;
+
+            double _t = (BP2.X - BP1.X) * (AP1.Y - BP1.Y) - (BP2.Y - BP1.Y) * (AP1.X - BP1.X);
+            double _s = (AP2.X - AP1.X) * (AP1.Y - BP1.Y) - (AP2.Y - AP1.Y) * (AP1.X - BP1.X);
+
+            t = _t / under;
+            s = _s / under;
+
+            if (t < 0.0 || t > 1.0 || s < 0.0 || s > 1.0)
+                return false;
+            if (_t == 0 && _s == 0) 
+                return false;
+            /*
+            //교점의 위치인듯?
+            IP->x = AP1.x + t * (double)(AP2.x - AP1.x);
+            IP->y = AP1.y + t * (double)(AP2.y - AP1.y);
+            */
+            return true;
         }
         //이미지 소스 to 비트맵 
         private System.Drawing.Bitmap GetBitmapFromBitmapSource(BitmapSource bitmapSource)
