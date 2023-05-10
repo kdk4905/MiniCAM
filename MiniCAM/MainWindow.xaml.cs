@@ -2,16 +2,11 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.IO.Ports;
 using System.Threading;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Point = System.Drawing.Point;
@@ -147,9 +142,11 @@ namespace MiniCAM
                     tpp.Start = new Point(0, 0);
                     tpp.End = new Point(0, 0);
                     Point Current = new Point(0, 0);
-                    int hatchInterval = 50;
+                    int hatchInterval = 20;
                     int tempY = 0;
                     int count = 0;
+                    int colCount = 0;
+                    int rowCount = 0;
                     // toolPathColumnManager
                     List<toolPathHatchingLine> toolPathColumnManager = new List<toolPathHatchingLine>();
 
@@ -171,15 +168,37 @@ namespace MiniCAM
                                     flag = false;
                                     EndColumn = true;
                                     toolPathColumnManager.Add(tpp);
+                                    colCount++;
+                                    //Console.WriteLine(tpp);
                                 }
                                 else if ((EndColumn) && (w == (bmp.Width - 1)))
                                 {
                                     tpp.End = Current;
                                     flag = false;
                                     EndColumn = false;
-                                    toolPathManager.Add(toolPathColumnManager);
+                                    toolPathManager.Add(new List<toolPathHatchingLine>());
+                                    int index = 0;
+                                    while (toolPathColumnManager.Count != 0)
+                                    {
+                                        toolPathManager[rowCount].Add(toolPathColumnManager[index]);
+                                        toolPathColumnManager.RemoveAt(0);
+                                        if (toolPathColumnManager.Count != 0)
+                                        {
+                                            continue;
+                                        }
+                                        else
+                                        {
+                                            rowCount++;
+                                        }
+                                    }
+                                    //toolPathColumnManager.Clear();
+                                    foreach (var item in toolPathColumnManager)
+                                    {
+                                        Console.WriteLine(w.ToString() + "," + h.ToString());
+                                        Console.WriteLine($"{item}");
+                                    }
+                                    //toolPathColumnManager.RemoveRange(0,toolPathColumnManager.Count);
                                     tempY += hatchInterval;
-                                    Console.WriteLine(w.ToString() + "," + h.ToString());
                                 }
                                 // 컬럼 끝
                             }
