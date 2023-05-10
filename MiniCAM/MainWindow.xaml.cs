@@ -273,6 +273,8 @@ namespace MiniCAM
             int col = 0;
             int UpZ = -80;
             int DownZ = 100;
+            string toolUpSpeed = "VS30;";
+            string toolDownSpeed = "VS24";
             // 왼쪽에서 오른쪽
             // 오른쪽에서 왼쪽
             // 제어하는 flag
@@ -281,7 +283,7 @@ namespace MiniCAM
             // 공구를 내렸을때
             // 해칭 그리기가
             // 끝났는지
-            bool isDrawFinished;
+            bool isDrawFinished = false;
 
             #region 첫 데이터 그리기
             // 첫 데이터
@@ -359,6 +361,12 @@ namespace MiniCAM
                     }
                 }
                 //해칭 그리기 시작
+                // col이 1개일때
+                if (toolPathManager[row].Count == 1)
+                {
+                    row = 1;
+                }
+                //해칭 그리기 시작
                 else
                 {
                     //다음 데이터를 가져오기 위한 row
@@ -369,12 +377,19 @@ namespace MiniCAM
                         int count = toolPathManager[row].Count;
                         for (int i = 0; i < count; i++)
                         {
-                           NextStart = toolPathManager[row][i].Start;
-                           NextEnd = toolPathManager[row][i].End;
+
+                            NextStart = toolPathManager[row][i].Start;
+                            NextEnd = toolPathManager[row][i].End;
+
+                            bool chkmeetline = checkMeetLine(Start, Current, NextStart, NextEnd);
+
+                            if (isDrawFinished)
+                            {
+                                moveToolPoint = new Point();
+                            }
                             // 다음 라인의 X값이
                             // 현재 끝점의 X값 
                             // 사이에 있을때
-                            bool chkmeetline = checkMeetLine(Start, Current, NextStart, NextEnd);
                             if (NextStart.X <= Current.X && Current.X <= NextEnd.X)
                             {
                                 //공구를 내리고
@@ -501,12 +516,18 @@ namespace MiniCAM
                                 if (!LeftToRight) 
                                 {
                                     isDrawFinished = true;
+                                    Order.Add(toolUpSpeed);
                                     moveToolPoint = Start;
+                                    string moveTool = makeToolpath(moveToolPoint, UpZ);
+                                    Order.Add(moveTool);
                                 }
                                 else 
                                 {
                                     isDrawFinished = true;
+                                    Order.Add(toolUpSpeed);
                                     moveToolPoint = Current;
+                                    string moveTool = makeToolpath(moveToolPoint, UpZ);
+                                    Order.Add(moveTool);
                                 }
                             }
                         }
@@ -574,6 +595,7 @@ namespace MiniCAM
             //sp.WriteLine(order);
         }
 
+        //툴패스를 초기화 하는 메서드
         private void initToolpath()
         {
             Order.Add("IN;");
@@ -584,6 +606,7 @@ namespace MiniCAM
             Order.Add("!SR0;");
         }
 
+        // 툴패스를 만드는 메서드
         private string makeToolpath(Point point, int z)
         {
             Point _point = point;
