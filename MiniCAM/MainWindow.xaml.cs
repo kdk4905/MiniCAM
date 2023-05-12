@@ -120,16 +120,17 @@ namespace MiniCAM
                     // Point Start, End를 가지고 있다
                     // toolPathPoint의 약자로 tpp로 명명함
                     toolPathHatchingLine tpp;
-                    tpp.Start = new Point(-250, -250);
-                    tpp.End = new Point(-250, -250);
+                    tpp.Start = new Point(0, 0);
+                    tpp.End = new Point(0, 0);
 
                     // Current
                     // 마지막 좌표를
                     // 저장하는 변수
-                    Point Current = new Point(-250, -250);
+                    Point Current = new Point(0, 0);
 
                     // 해칭 간격
-                    int hatchInterval = 25;
+                    int hatchInterval = 5;
+                    // 0.1mm
 
                     // 반복문에서 사용할 변수들
                     int tempY = 0;
@@ -365,6 +366,7 @@ namespace MiniCAM
             order.Add("VS36");
             order.Add(startP);
             order.Add(endP);
+            current = end;
 
             // 첫라인
             // Left -> Right 수행
@@ -393,10 +395,45 @@ namespace MiniCAM
                     }
                     for (int j = 0; j < toolPathManager[i].Count; j++)
                     {
-                        nextEnd = toolPathManager[i][j].End;
                         nextStart = toolPathManager[i][j].Start;
+                        nextEnd = toolPathManager[i][j].End;
+                        if (i + 1 == toolPathManager.Count) 
+                        {
+                        
+                        }
+
                         if (!leftToRight)
                         {
+                            //기본
+                            tempPoint = new Point(current.X, nextEnd.Y);
+                            //공구 내림
+                            toolMove = makeToolpath(tempPoint, downZ);
+                            order.Add(toolMove);
+                            //공구 이동
+                            toolMove = makeToolpath(nextStart, downZ);
+                            order.Add(toolMove);
+                            start = nextStart; 
+                            end = nextEnd;
+                            leftToRight = true;
+                            current = nextStart;
+                            toolPathManager[i].RemoveAt(j);
+                            if (toolPathManager[i].Count == 0)
+                            {
+                                toolPathManager.RemoveAt(i);
+                                i -= 1;
+                            }
+                            // 마지막 라인인가?
+                            // 맞으면 공구 올림
+                            if (i + 1 == toolPathManager.Count)
+                            {
+                                toolMove = makeToolpath(current, upZ);
+                                order.Add(toolUpSpeed);
+                                order.Add(toolMove);
+                                order.Add(toolMove);
+                                order.Add(toolMove);
+                            }
+                            break;
+
                             if (isDrawLastRow)
                             {
                                 start = nextStart;
@@ -419,7 +456,7 @@ namespace MiniCAM
                                 break;
                             }
 
-                            if (start.X < nextEnd.X && nextEnd.X < end.X)
+                            /*if (start.X < nextEnd.X && nextEnd.X < end.X)
                             {
                                 tempPoint.X = nextEnd.X;
                                 tempPoint.Y = end.Y;
@@ -473,10 +510,40 @@ namespace MiniCAM
                                     break;
                                 }
                                 break;
-                            }
+                            }*/
                         }
                         else
                         {
+                            //기본
+                            tempPoint = new Point(current.X, nextEnd.Y);
+                            //공구 내림
+                            toolMove = makeToolpath(tempPoint, downZ);
+                            order.Add(toolMove);
+                            //공구 이동
+                            toolMove = makeToolpath(nextEnd, downZ);
+                            order.Add(toolMove);
+                            start = nextStart;
+                            end = nextEnd;
+                            leftToRight = false;
+                            current = nextEnd;
+                            toolPathManager[i].RemoveAt(j);
+                            if (toolPathManager[i].Count == 0)
+                            {
+                                toolPathManager.RemoveAt(i);
+                                i -= 1;
+                            }
+                            // 마지막 라인인가?
+                            // 맞으면 공구 올림
+                            if (i + 1 == toolPathManager.Count)
+                            {
+                                toolMove = makeToolpath(current, upZ);
+                                order.Add(toolUpSpeed);
+                                order.Add(toolMove);
+                                order.Add(toolMove);
+                                order.Add(toolMove);
+                            }
+                            break;
+
                             if (isDrawLastRow)
                             {
                                 start = nextStart;
@@ -502,7 +569,7 @@ namespace MiniCAM
                             }
                             //LtoR
                             //수정 필요
-                            if (start.X < nextEnd.X && nextEnd.X < end.X)
+                            /*if (start.X < nextEnd.X && nextEnd.X < end.X)
                             {
                                 tempPoint.X = start.X;
                                 tempPoint.Y = nextStart.Y;
@@ -556,11 +623,11 @@ namespace MiniCAM
                                     break;
                                 }
                                 break;
-                            }
+                            }*/
                         }
                     }
 
-                    if (i + 1 == toolPathManager.Count)
+                    /*if (i + 1 == toolPathManager.Count)
                     {
                         order.Add("VS30;");
                         //공구 올림
@@ -584,7 +651,7 @@ namespace MiniCAM
                             end = new Point();
                             //count++;
                         }
-                    }
+                    }*/
                 }
             }
             order.Add("!VO;");
