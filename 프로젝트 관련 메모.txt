@@ -1,3 +1,65 @@
+[05-13]
+어제 작업한 내용
+실행 성공
+> 단계별로
+실행하고 조회가 가능함
+
+작업 내용
+다음 그리기 -> row 5 까지 그리기
+공구 들고 최상단으로 이동
+
+# 다음 그리기
+다음?
+current에는
+공구가 멈춘 위치 SP or EP
+를 넣어준다
+EP를 기준으로
+SP to EP 안에 있으면 그리기
+기준 - End
+am 10:49
+소재에 Row 끝까지
+그리기 완성
+#공구 들기
+1) Row가 끝을 만났을때
+tempPoint == start //LtR로 끝났다
+tempPoint == End //RtL로 끝났다
+그자리에서 공구 올리기
+//속도 VS30;
+//현재 좌표
+LtoR 시작 ㅇ
+
+//이동 좌표
+if(isDrawLastRow)
+order.Add();
+
+2) start와 nextstart가 같을때
+이때는 row의 nextCol
+아래 내용이 돌아야 하는가?
+> 안돌아도 됨
+소진할 것 임
+if(start == nextStart && current == nextEnd)
+일단 점을 찍어야함
+
+3) current에서 다음 row를 봤을때
+end가 범위를 벗어난 경우
+start는 범위 내에 있는가? 탐색
+있으면 거기로 이동
+기준점은 계속 current이고
+LtoR인지 - end
+RtoL인지에 따라 - start
+current의 값이 바뀜
+
+4) while(리스트에 데이터가 없으면) - 조건 달성
+for
+	for
+동작 잘 됨
+hatch알고리즘만 손보면 됨
+#이상한점
+1. 의문의 대각선 스크래치
+
+
+
+
 [05-12]
 작업내용
 1. 이미지의 위치
@@ -36,7 +98,6 @@ removeat
 6) 공구 들기
 바닥으로 왔을때
 i가 6되서 나올때 공구 들어야함
-
 
 [05-03]
 # 문제점
