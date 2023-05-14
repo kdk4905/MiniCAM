@@ -210,6 +210,31 @@ namespace MiniCAM
                                 bmp.SetPixel(w, h, System.Drawing.Color.Black);
                                 // 검은색 영역을
                                 // 처음 만났을 때
+ 
+                                //영역의 0~499가
+                                //다 검은색일때
+                                if ((!flag) && (w == (bmp.Width - 1)))
+                                {
+                                    tpp.End = new Point(w, h);
+                                    toolPathColumnManager.Add(tpp);
+                                    toolPathManager.Add(new List<toolPathHatchingLine>());
+                                    int index = 0;
+                                    while (toolPathColumnManager.Count != 0)
+                                    {
+
+                                        toolPathManager[rowCount].Add(toolPathColumnManager[index]);
+                                        toolPathColumnManager.RemoveAt(0);
+                                        if (toolPathColumnManager.Count != 0)
+                                        {
+                                            continue;
+                                        }
+                                        else
+                                        {
+                                            rowCount++;
+                                        }
+                                    }
+                                    tempY += hatchInterval;
+                                }
                                 if ((!flag) && (count == 0))
                                 {
                                     // 처음 만난 검은색
