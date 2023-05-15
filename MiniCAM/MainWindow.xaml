@@ -16,9 +16,25 @@
         <Button Content="이미지 불러오기" x:Name="btnImageOpen" Height="20" Width="100" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,5,10,0" Click="btnImageOpen_Click"/>
         <StackPanel x:Name="stackpnlImage" Width="200" Height="200">
         </StackPanel>
-        <Label Content="속도 :" x:Name="lblVelocity" Height="25" Width="200" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="10,10,10,0"/>
-        <Label Content="깊이 :" x:Name="lblDepth" Height="25" Width="200" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="10,10,10,0"/>
-        <Label Content="이동높이 :" x:Name="lblMovementHeight" Height="25" Width="200" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="10,10,10,0"/>
-        <Label Content="해칭간격 :" x:Name="lblLocation" Height="25" Width="200" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="10,10,10,0"/>
+        <Grid Height="35">
+            <Label x:Name="lblMoveToolSpeed" Content="속도 : 36mm/s (기본)" Height="25" Width="200" HorizontalAlignment="Left" Margin="10,0,0,0"/>
+            <TextBox x:Name="txtMoveToolSpeed" Width="100" Height="25" HorizontalAlignment="Right" Margin="0,0,70,0"/>
+            <Button x:Name="btnMoveToolSpeed" Content="설정" Width="50" Height="25" HorizontalAlignment="Right" Margin="0,0,10,0" Click="btnMoveToolSpeed_Click"/>
+        </Grid>
+        <Grid Height="35">
+            <Label x:Name="lblDownZ" Content="깊이 : 100mm (기본)" Height="25" Width="200" HorizontalAlignment="Left" Margin="10,0,0,0"/>
+            <TextBox x:Name="txtDownZ" Width="100" Height="25" HorizontalAlignment="Right" Margin="0,0,70,0"/>
+            <Button x:Name="btnDownZ" Content="설정" Width="50" Height="25" HorizontalAlignment="Right" Margin="0,0,10,0" Click="btnDownZ_Click"/>
+        </Grid>
+        <Grid Height="35">
+            <Label x:Name="lblUpz" Content="이동높이 : 80mm (기본)" Height="25" Width="200" HorizontalAlignment="Left" Margin="10,0,0,0"/>
+            <TextBox x:Name="txtUpZ" Width="100" Height="25" HorizontalAlignment="Right" Margin="0,0,70,0"/>
+            <Button x:Name="btnUpZ" Content="설정" Width="50" Height="25" HorizontalAlignment="Right" Margin="0,0,10,0" Click="btnUpZ_Click"/>
+        </Grid>
+        <Grid Height="35">
+            <Label x:Name="lblHatchInterval" Content="해칭간격 : 0.1mm (기본)"  Height="25" Width="200" HorizontalAlignment="Left" Margin="10,0,0,0"/>
+            <TextBox x:Name="txtHatchInterval" Width="100" Height="25" HorizontalAlignment="Right" Margin="0,0,70,0"/>
+            <Button x:Name="btnHatchInterval" Content="설정" Width="50" Height="25" HorizontalAlignment="Right" Margin="0,0,10,0" Click="btnHatchInterval_Click"/>
+        </Grid>
     </StackPanel>
 </Window>

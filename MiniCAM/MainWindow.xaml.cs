@@ -33,6 +33,10 @@ namespace MiniCAM
         // HatchingManager
         List<List<List<toolPathHatchingLine>>> HatchingManager = new List<List<List<toolPathHatchingLine>>>();
         string T_msg = ""; //WPF Text 저장용
+        string toolMoveSpeed = "VS36;";
+        int downZ = 100;
+        int upZ = -80;
+        int hatchInterval = 25;
         // bool
         bool IsSpOpen;
         // CNC 이미지
@@ -129,7 +133,7 @@ namespace MiniCAM
                     Point Current = new Point(0, 0);
 
                     // 해칭 간격
-                    int hatchInterval = 25;
+                    //hatchInterval = 25;
                     // 5 : 0.1mm
 
                     // 반복문에서 사용할 변수들
@@ -313,13 +317,14 @@ namespace MiniCAM
             toolPathHatchingLine tphlStart, tphlCurrent;
             int row = 0;
             int col = 0;
-            int upZ = -80;
-            int downZ = 100;
+            //upZ = -80;
+            //downZ = 100;
             // 공구를 드는 속도
             string toolUpSpeed = "VS30;";
             // 공구를 내리는 속도
             string toolDownSpeed = "VS24;";
-            string toolMoveSpeed = "VS36;";
+            // 공구 움직이는 속도
+            //toolMoveSpeed = "VS36;";
 
             // 왼쪽에서 오른쪽
             // 오른쪽에서 왼쪽
@@ -398,7 +403,7 @@ namespace MiniCAM
             order.Add(startP);
 
             // 첫 공구 이동
-            order.Add("VS36");
+            order.Add(toolMoveSpeed);
             order.Add(startP);
             order.Add(endP);
             current = end;
@@ -479,8 +484,18 @@ namespace MiniCAM
                             }
                             //Row 27 -> Row 28
                             //공구 들기 2
-                            else if(!((nextStart.X <= current.X) && (current.X <= nextEnd.X)))
+                            //문제 지점
+                            //현재 라인이
+                            //이전 라인에
+                            //포함되어 있을때
+                            else if(
+                                (start.X <= nextStart.X) && (nextStart.X <= current.X)
+                                && ((start.X <= nextEnd.X) && (nextEnd.X <= current.X))
+                                    )
                             {
+                                //마지막 행일때
+                                //공구 들기 만들기
+                                //[05.15] 수정 필요
                                 if (i + 1 == toolPathManager.Count)
                                 {
                                     toolMove = makeToolpath(current, upZ);
@@ -498,14 +513,15 @@ namespace MiniCAM
                                 }
                                 else 
                                 {
-                                    toolMove = makeToolpath(current, upZ);
-                                    order.Add(toolUpSpeed);
-                                    order.Add(toolMove);
-                                    tempPoint = nextEnd;
-                                    toolMove = makeToolpath(tempPoint, upZ);
-                                    order.Add(toolMove);
+                                    //공구 이동
+                                    tempPoint = new Point(nextEnd.X, current.Y);
                                     toolMove = makeToolpath(tempPoint, downZ);
-                                    order.Add(toolMoveSpeed);
+                                    order.Add(toolMove);
+                                    //공구 내림
+                                    toolMove = makeToolpath(nextEnd, downZ);
+                                    order.Add(toolMove);
+                                    //공구 이동
+                                    toolMove = makeToolpath(nextStart, downZ);
                                     order.Add(toolMove);
                                 }
                             }
@@ -672,7 +688,9 @@ namespace MiniCAM
                             // 다음 라인을
                             // 포함할 때
                             // 교점의 거리 공식 필요
-                            else if (!((nextStart.X <= current.X) && (current.X <= nextEnd.X)))
+                            else if (((start.X <= nextStart.X) && (nextStart.X <= current.X))
+                                                               &&
+                                       ((start.X <= nextEnd.X) && (nextEnd.X <= current.X)))
                             {
                                 if (i + 1 == toolPathManager.Count)
                                 {
@@ -691,15 +709,15 @@ namespace MiniCAM
                                 }
                                 else
                                 {
-                                    //공구 들음
-                                    toolMove = makeToolpath(current, upZ);
-                                    order.Add(toolUpSpeed);
-                                    order.Add(toolMove);
-                                    //다음 위치로 이동
-                                    tempPoint = nextStart;
-                                    toolMove = makeToolpath(tempPoint, upZ);
-                                    order.Add(toolMove);
+                                    //공구 이동
+                                    tempPoint = new Point(nextStart.X, current.Y);
                                     toolMove = makeToolpath(tempPoint, downZ);
+                                    order.Add(toolMove);
+                                    //공구 내림
+                                    toolMove = makeToolpath(nextStart, downZ);
+                                    order.Add(toolMove);
+                                    //공구 이동
+                                    toolMove = makeToolpath(nextEnd, downZ);
                                     order.Add(toolMove);
                                 }
                             }
@@ -733,6 +751,7 @@ namespace MiniCAM
                                 order.Add(toolMove);
                                 order.Add(toolMove);
                                 order.Add(toolMove);
+                                isDrawLastRow = true;
                             }
                             break;
 
@@ -857,6 +876,7 @@ namespace MiniCAM
         }
         #endregion
         #region 메서드
+
         #region 툴패스 초기화
         //툴패스를 초기화 하는 메서드
         private void initToolpath()
@@ -988,6 +1008,41 @@ namespace MiniCAM
         }
         #endregion
         #endregion
+
+        #endregion
+        #region 기계 설정
+
+        private void btnMoveToolSpeed_Click(object sender, RoutedEventArgs e)
+        {
+            string setMachineOperation = "";
+            setMachineOperation = txtMoveToolSpeed.Text;
+            toolMoveSpeed = "VS" + setMachineOperation + ";";
+            lblMoveToolSpeed.Content = "속도 : " + setMachineOperation + "mm/s";
+        }
+
+        private void btnDownZ_Click(object sender, RoutedEventArgs e)
+        {
+            string setMachineOperation = "";
+            setMachineOperation = txtDownZ.Text;
+            downZ = Int32.Parse(setMachineOperation);
+            lblDownZ.Content = "깊이 : " + setMachineOperation + "mm";
+        }
+
+        private void btnUpZ_Click(object sender, RoutedEventArgs e)
+        {
+            string setMachineOperation = "";
+            setMachineOperation = txtUpZ.Text;
+            upZ = Int32.Parse(setMachineOperation);
+            lblUpz.Content = "이동높이 : " + setMachineOperation + "mm";
+        }
+
+        private void btnHatchInterval_Click(object sender, RoutedEventArgs e)
+        {
+            string setMachineOperation = "";
+            setMachineOperation = txtHatchInterval.Text;
+            hatchInterval = Int32.Parse(setMachineOperation);
+            lblHatchInterval.Content = "해칭간격 : " + setMachineOperation + "mm";
+        }
         #endregion
     }
 }
