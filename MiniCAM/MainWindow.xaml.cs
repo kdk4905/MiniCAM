@@ -36,7 +36,7 @@ namespace MiniCAM
         string toolMoveSpeed = "VS36;";
         int downZ = 100;
         int upZ = -80;
-        int hatchInterval = 25;
+        int hatchInterval = 5;
         // bool
         bool IsSpOpen;
         // CNC 이미지
@@ -141,6 +141,7 @@ namespace MiniCAM
                     int count = 0;
                     int colCount = 0;
                     int rowCount = 0;
+                    int colorCount = 0;
 
                     // toolPathColumnManager
                     List<toolPathHatchingLine> toolPathColumnManager = new List<toolPathHatchingLine>();
@@ -159,6 +160,18 @@ namespace MiniCAM
                             // 회색.
                             // 이보다 높은 값 = 흰색
                             // 그 외에 모든 값 = 검은색
+                            //if ((h==173) && (flag))
+                            //{
+                            //    Console.WriteLine("디버깅 지점");
+                            //}
+                            //if ((h == 173) && (!flag))
+                            //{
+
+                            //}
+                            //if ((w == 424) && (h == 173))
+                            //{
+                            //    Console.WriteLine("디버깅 지점");
+                            //}
                             color = bmp.GetPixel(w, h);
                             rgb = (color.R + color.G + color.B) / 3;
                             if (rgb > ((128 + 128 + 128) / 3))
@@ -169,16 +182,30 @@ namespace MiniCAM
                                 // 컬럼 추가
                                 if (flag)
                                 {
-                                    tpp.End = Current;
-                                    flag = false;
-                                    EndColumn = true;
-                                    toolPathColumnManager.Add(tpp);
-                                    colCount++;
+                                    if (colorCount == 0) 
+                                    {
+                                        tpp.End = tpp.Start;
+                                        flag = false;
+                                        EndColumn = true;
+                                        toolPathColumnManager.Add(tpp);
+                                        colCount++;
+                                    }
+                                    else
+                                    {
+                                        tpp.End = Current;
+                                        colorCount = 0;
+                                        flag = false;
+                                        EndColumn = true;
+                                        toolPathColumnManager.Add(tpp);
+                                        colCount++;
+                                    }
                                     //Console.WriteLine(tpp);
                                 }
+                                //컬럼 탐색 끝
                                 else if ((EndColumn) && (w == (bmp.Width - 1)))
                                 {
                                     tpp.End = Current;
+                                    colorCount = 0;
                                     flag = false;
                                     EndColumn = false;
                                     toolPathManager.Add(new List<toolPathHatchingLine>());
@@ -214,12 +241,13 @@ namespace MiniCAM
                                 bmp.SetPixel(w, h, System.Drawing.Color.Black);
                                 // 검은색 영역을
                                 // 처음 만났을 때
- 
+
                                 //영역의 0~499가
                                 //다 검은색일때
                                 if ((flag) && (w == (bmp.Width - 1)))
                                 {
                                     tpp.End = new Point(w, h);
+                                    colorCount = 0;
                                     toolPathColumnManager.Add(tpp);
                                     toolPathManager.Add(new List<toolPathHatchingLine>());
                                     int index = 0;
@@ -267,6 +295,7 @@ namespace MiniCAM
                                 else
                                 {
                                     Current = new Point(w, h);
+                                    colorCount++;
                                     continue;
                                 }
                             }
@@ -335,6 +364,9 @@ namespace MiniCAM
             // 해칭 그리기가
             // 끝났는지
             bool isDrawLastRow = false;
+            // 공구 올리고
+            // 해칭 그리기 첫번째인지?
+            bool isDrawFirstRow = false;
 
             // 첫번째 로우를 그렸을때
             // col이 두개 이상이면
@@ -448,6 +480,7 @@ namespace MiniCAM
 
                         if (!leftToRight)
                         {
+                            //마지막 라인
                             if (isDrawLastRow)
                             {
                                 current = nextStart;
@@ -456,93 +489,159 @@ namespace MiniCAM
                                 order.Add(toolMove);
                                 order.Add(toolMoveSpeed);
                                 isDrawLastRow = false;
+                                isDrawFirstRow = true;
                             }
-                            // 현재 라인의 끝점이
-                            // 다음 라인의 사이에 있는지? 
-                            if ((nextStart.X <= current.X) &&(current.X <= nextEnd.X))
+
+                            //다음 라인의 Y값이
+                            //현재 라인의 Y값보다
+                            //큰 경우
+                            if (nextEnd.Y > (current.Y) + hatchInterval)
                             {
+                                toolMove = makeToolpath(current, upZ);
+                                order.Add(toolMove);
+                                //사용 변수들 초기화
+                                start = new Point(0, 0);
+                                end = new Point(0, 0);
+                                current = new Point(0, 0);
+                                leftToRight = true;
+                                isDrawLastRow = true;
+                                break;
+                            }
+
+                            if (!isDrawFirstRow)
+                            {
+                                // 현재 라인의 끝점이
+                                // 다음 라인의 사이에 있는지? 
+                                if ((nextStart.X <= current.X) && (current.X <= nextEnd.X))
+                                {
+                                    tempPoint = new Point(current.X, nextEnd.Y);
+                                    //공구 내림
+                                    toolMove = makeToolpath(tempPoint, downZ);
+                                    order.Add(toolMove);
+                                    //공구 이동 nextEnd
+                                    toolMove = makeToolpath(nextEnd, downZ);
+                                    order.Add(toolMove);
+                                    // 공구 이동 nextStart
+                                    toolMove = makeToolpath(nextStart, downZ);
+                                    order.Add(toolMove);
+                                }
+                                // 현재 라인의 시작점이
+                                // 다음 라인의 사이에 있는지?
+                                else if ((nextStart.X <= start.X) && (start.X <= nextEnd.X))
+                                {
+                                    tempPoint = new Point(nextEnd.X, current.Y);
+                                    toolMove = makeToolpath(tempPoint, downZ);
+                                    order.Add(toolMove);
+                                    toolMove = makeToolpath(nextEnd, downZ);
+                                    order.Add(toolMove);
+                                    toolMove = makeToolpath(nextStart, downZ);
+                                    order.Add(toolMove);
+                                }
+                                //Row 27 -> Row 28
+                                //공구 들기 2
+                                //문제 지점
+                                //현재 라인이
+                                //이전 라인에
+                                //포함되어 있을때
+                                else if (
+                                    (start.X <= nextStart.X) && (nextStart.X <= current.X)
+                                    && ((start.X <= nextEnd.X) && (nextEnd.X <= current.X))
+                                        )
+                                {
+                                    //마지막 행일때
+                                    //공구 들기 만들기
+                                    //[05.15] 수정 필요
+                                    if (i + 1 == toolPathManager.Count)
+                                    {
+                                        toolMove = makeToolpath(current, upZ);
+                                        order.Add(toolUpSpeed);
+                                        order.Add(toolMove);
+                                        order.Add(toolMove);
+                                        order.Add(toolMove);
+                                        //사용 변수들 초기화
+                                        start = new Point(0, 0);
+                                        end = new Point(0, 0);
+                                        current = new Point(0, 0);
+                                        leftToRight = true;
+                                        isDrawLastRow = true;
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        //공구 이동
+                                        tempPoint = new Point(nextEnd.X, current.Y);
+                                        toolMove = makeToolpath(tempPoint, downZ);
+                                        order.Add(toolMove);
+                                        //공구 내림
+                                        toolMove = makeToolpath(nextEnd, downZ);
+                                        order.Add(toolMove);
+                                        //공구 이동
+                                        toolMove = makeToolpath(nextStart, downZ);
+                                        order.Add(toolMove);
+                                    }
+                                }
+                                else
+                                {
+                                    //리스트의 컬럼이 2개 이상인 경우
+                                    if (toolPathManager[i].Count > 1)
+                                    {
+                                        //컬럼을 끝까지 탐색했는데
+                                        //그릴게 없다
+                                        //공구 들기
+                                        if (i + 1 == toolPathManager.Count)
+                                        {
+
+                                            toolMove = makeToolpath(current, upZ);
+                                            order.Add(toolMove);
+                                            //사용 변수들 초기화
+                                            start = new Point(0, 0);
+                                            end = new Point(0, 0);
+                                            current = new Point(0, 0);
+                                            leftToRight = false;
+                                            isDrawLastRow = true;
+                                            break;
+                                        }
+                                        else
+                                        {
+                                            continue;
+                                        }
+                                    }
+                                    //리스트의 컬럼이 1개인 경우
+                                    else
+                                    {
+                                        toolMove = makeToolpath(current, upZ);
+                                        order.Add(toolMove);
+                                        //사용 변수들 초기화
+                                        start = new Point(0, 0);
+                                        end = new Point(0, 0);
+                                        current = new Point(0, 0);
+                                        leftToRight = false;
+                                        isDrawLastRow = true;
+                                        break;
+                                    }
+                                }
+                                //공구를 들었나?
+                                //start, end, current -> 0,0인 상태
+                                /*
+                                //기본
                                 tempPoint = new Point(current.X, nextEnd.Y);
                                 //공구 내림
                                 toolMove = makeToolpath(tempPoint, downZ);
                                 order.Add(toolMove);
-                                //공구 이동 nextEnd
-                                toolMove = makeToolpath(nextEnd, downZ);
-                                order.Add(toolMove);
-                                // 공구 이동 nextStart
+                                //공구 이동
                                 toolMove = makeToolpath(nextStart, downZ);
                                 order.Add(toolMove);
+                                */
                             }
-                            // 현재 라인의 시작점이
-                            // 다음 라인의 사이에 있는지?
-                            else if ((nextStart.X <= start.X) && (start.X <= nextEnd.X))
-                            {
-                                tempPoint = new Point(nextEnd.X, current.Y);
-                                toolMove = makeToolpath(tempPoint, downZ);
-                                order.Add(toolMove);
-                                toolMove = makeToolpath(nextEnd, downZ);
-                                order.Add(toolMove);
-                                toolMove = makeToolpath(nextStart, downZ);
-                                order.Add(toolMove);
-                            }
-                            //Row 27 -> Row 28
-                            //공구 들기 2
-                            //문제 지점
-                            //현재 라인이
-                            //이전 라인에
-                            //포함되어 있을때
-                            else if(
-                                (start.X <= nextStart.X) && (nextStart.X <= current.X)
-                                && ((start.X <= nextEnd.X) && (nextEnd.X <= current.X))
-                                    )
-                            {
-                                //마지막 행일때
-                                //공구 들기 만들기
-                                //[05.15] 수정 필요
-                                if (i + 1 == toolPathManager.Count)
-                                {
-                                    toolMove = makeToolpath(current, upZ);
-                                    order.Add(toolUpSpeed);
-                                    order.Add(toolMove);
-                                    order.Add(toolMove);
-                                    order.Add(toolMove);
-                                    //사용 변수들 초기화
-                                    start = new Point(0, 0);
-                                    end = new Point(0, 0);
-                                    current = new Point(0, 0);
-                                    leftToRight = true;
-                                    isDrawLastRow = true;
-                                    break;
-                                }
-                                else 
-                                {
-                                    //공구 이동
-                                    tempPoint = new Point(nextEnd.X, current.Y);
-                                    toolMove = makeToolpath(tempPoint, downZ);
-                                    order.Add(toolMove);
-                                    //공구 내림
-                                    toolMove = makeToolpath(nextEnd, downZ);
-                                    order.Add(toolMove);
-                                    //공구 이동
-                                    toolMove = makeToolpath(nextStart, downZ);
-                                    order.Add(toolMove);
-                                }
-                            }
-                            //공구를 들었나?
-                            //start, end, current -> 0,0인 상태
-                            /*
-                            //기본
-                            tempPoint = new Point(current.X, nextEnd.Y);
-                            //공구 내림
-                            toolMove = makeToolpath(tempPoint, downZ);
-                            order.Add(toolMove);
-                            //공구 이동
-                            toolMove = makeToolpath(nextStart, downZ);
-                            order.Add(toolMove);
-                            */
-                            start = nextStart; 
+                            start = nextStart;
                             end = nextEnd;
+                            toolMove = makeToolpath(end, downZ);
+                            order.Add(toolMove);
+                            toolMove = makeToolpath(start, downZ);
+                            order.Add(toolMove);
                             leftToRight = true;
                             current = nextStart;
+                            isDrawFirstRow = false;
                             //이거의 역할?
                             toolPathManager[i].RemoveAt(j);
                             if (toolPathManager[i].Count == 0)
@@ -578,50 +677,16 @@ namespace MiniCAM
                                 order.Add(toolMove);
                                 order.Add(toolMoveSpeed);
                                 isDrawLastRow = false;
+                                isDrawFirstRow = true;
                             }
-
-                            // 현재 라인의 끝점이
-                            // 다음 라인의 사이에 있는지? 
-                            if ((nextStart.X <= current.X) && (current.X <= nextEnd.X))
+                            if (!isDrawFirstRow)
                             {
-                                //기본
-                                tempPoint = new Point(current.X, nextEnd.Y);
-                                //공구 내림
-                                toolMove = makeToolpath(tempPoint, downZ);
-                                order.Add(toolMove);
-                                // 공구 이동 nextStart
-                                toolMove = makeToolpath(nextStart, downZ);
-                                order.Add(toolMove);
-                                //공구 이동 nextEnd
-                                toolMove = makeToolpath(nextEnd, downZ);
-                                order.Add(toolMove);
-                            }
-                            // 현재 라인의 시작점이
-                            // 다음 라인의 사이에 있는지?
-                            else if ((nextStart.X <= end.X) && (end.X <= nextEnd.X))
-                            {
-                                tempPoint = new Point(nextStart.X, current.Y);
-                                toolMove = makeToolpath(tempPoint, downZ);
-                                order.Add(toolMove);
-                                toolMove = makeToolpath(nextStart, downZ);
-                                order.Add(toolMove);
-                                toolMove = makeToolpath(nextEnd, downZ);
-                                order.Add(toolMove);
-                            }
-                            // 현재 라인이
-                            // 다음 라인을
-                            // 포함할 때
-                            // 교점의 거리 공식 필요
-                            else if (((start.X <= nextStart.X) && (nextStart.X <= current.X))
-                                                               &&
-                                       ((start.X <= nextEnd.X) && (nextEnd.X <= current.X)))
-                            {
-                                if (i + 1 == toolPathManager.Count)
+                                //다음 라인의 Y값이
+                                //현재 라인의 Y값보다
+                                //큰 경우
+                                if (nextEnd.Y > (current.Y) + hatchInterval)
                                 {
                                     toolMove = makeToolpath(current, upZ);
-                                    order.Add(toolUpSpeed);
-                                    order.Add(toolMove);
-                                    order.Add(toolMove);
                                     order.Add(toolMove);
                                     //사용 변수들 초기화
                                     start = new Point(0, 0);
@@ -631,18 +696,110 @@ namespace MiniCAM
                                     isDrawLastRow = true;
                                     break;
                                 }
-                                else
+                                // 현재 라인의 끝점이
+                                // 다음 라인의 사이에 있는지? 
+                                if ((nextStart.X <= current.X) && (current.X <= nextEnd.X))
                                 {
-                                    //공구 이동
+                                    //기본
+                                    tempPoint = new Point(current.X, nextEnd.Y);
+                                    //공구 내림
+                                    toolMove = makeToolpath(tempPoint, downZ);
+                                    order.Add(toolMove);
+                                    // 공구 이동 nextStart
+                                    toolMove = makeToolpath(nextStart, downZ);
+                                    order.Add(toolMove);
+                                    //공구 이동 nextEnd
+                                    toolMove = makeToolpath(nextEnd, downZ);
+                                    order.Add(toolMove);
+                                }
+                                // 현재 라인의 시작점이
+                                // 다음 라인의 사이에 있는지?
+                                else if ((nextStart.X <= end.X) && (end.X <= nextEnd.X))
+                                {
                                     tempPoint = new Point(nextStart.X, current.Y);
                                     toolMove = makeToolpath(tempPoint, downZ);
                                     order.Add(toolMove);
-                                    //공구 내림
                                     toolMove = makeToolpath(nextStart, downZ);
                                     order.Add(toolMove);
-                                    //공구 이동
                                     toolMove = makeToolpath(nextEnd, downZ);
                                     order.Add(toolMove);
+                                }
+                                // 현재 라인이
+                                // 다음 라인을
+                                // 포함할 때
+                                // 교점의 거리 공식 필요
+                                else if (((start.X <= nextStart.X) && (nextStart.X <= current.X))
+                                                                   &&
+                                           ((start.X <= nextEnd.X) && (nextEnd.X <= current.X)))
+                                {
+                                    if (i + 1 == toolPathManager.Count)
+                                    {
+                                        toolMove = makeToolpath(current, upZ);
+                                        order.Add(toolUpSpeed);
+                                        order.Add(toolMove);
+                                        order.Add(toolMove);
+                                        order.Add(toolMove);
+                                        //사용 변수들 초기화
+                                        start = new Point(0, 0);
+                                        end = new Point(0, 0);
+                                        current = new Point(0, 0);
+                                        leftToRight = false;
+                                        isDrawLastRow = true;
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        //공구 이동
+                                        tempPoint = new Point(nextStart.X, current.Y);
+                                        toolMove = makeToolpath(tempPoint, downZ);
+                                        order.Add(toolMove);
+                                        //공구 내림
+                                        toolMove = makeToolpath(nextStart, downZ);
+                                        order.Add(toolMove);
+                                        //공구 이동
+                                        toolMove = makeToolpath(nextEnd, downZ);
+                                        order.Add(toolMove);
+                                    }
+                                }
+                                //답X, 공구 들어야함
+                                else
+                                {
+                                    //리스트의 컬럼이 2개 이상인 경우
+                                    if (toolPathManager[i].Count > 1)
+                                    {
+                                        //컬럼을 끝까지 탐색했는데
+                                        //그릴게 없다
+                                        //공구 들기
+                                        if (i + 1 == toolPathManager.Count)
+                                        {
+                                            toolMove = makeToolpath(current, upZ);
+                                            order.Add(toolMove);
+                                            //사용 변수들 초기화
+                                            start = new Point(0, 0);
+                                            end = new Point(0, 0);
+                                            current = new Point(0, 0);
+                                            leftToRight = false;
+                                            isDrawLastRow = true;
+                                            break;
+                                        }
+                                        else
+                                        {
+                                            continue;
+                                        }
+                                    }
+                                    //리스트의 컬럼이 1개인 경우
+                                    else
+                                    {
+                                        toolMove = makeToolpath(current, upZ);
+                                        order.Add(toolMove);
+                                        //사용 변수들 초기화
+                                        start = new Point(0, 0);
+                                        end = new Point(0, 0);
+                                        current = new Point(0, 0);
+                                        leftToRight = false;
+                                        isDrawLastRow = true;
+                                        break;
+                                    }
                                 }
                             }
                             /*
@@ -657,8 +814,13 @@ namespace MiniCAM
                             */
                             start = nextStart;
                             end = nextEnd;
+                            toolMove = makeToolpath(start, downZ);
+                            order.Add(toolMove);
+                            toolMove = makeToolpath(end, downZ);
+                            order.Add(toolMove);
                             leftToRight = false;
                             current = nextEnd;
+                            isDrawFirstRow = false;
                             //
                             toolPathManager[i].RemoveAt(j);
                             if (toolPathManager[i].Count == 0)
