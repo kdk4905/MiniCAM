@@ -479,6 +479,8 @@ namespace MiniCAM
                                 tempPoint = new Point(nextEnd.X, current.Y);
                                 toolMove = makeToolpath(tempPoint, downZ);
                                 order.Add(toolMove);
+                                toolMove = makeToolpath(nextEnd, downZ);
+                                order.Add(toolMove);
                                 toolMove = makeToolpath(nextStart, downZ);
                                 order.Add(toolMove);
                             }
@@ -565,84 +567,6 @@ namespace MiniCAM
                                 isDrawLastRow = true;
                             }
                             break;
-
-                            if (isDrawLastRow)
-                            {
-                                start = nextStart;
-                                end = nextEnd;
-                                toolMove = makeToolpath(end, upZ);
-                                order.Add(toolMove);
-                                order.Add(toolDownSpeed);
-                                toolMove = makeToolpath(end, downZ);
-                                order.Add(toolMove);
-                                toolMove = makeToolpath(start, downZ);
-                                order.Add(toolMove);
-                                isDrawLastRow = false;
-                                leftToRight = true;
-                                current = end;
-                                toolPathManager[i].RemoveAt(j);
-                                if (toolPathManager[i].Count == 0)
-                                {
-                                    toolPathManager.RemoveAt(i);
-                                }
-                                break;
-                            }
-
-                            /*if (start.X < nextEnd.X && nextEnd.X < end.X)
-                            {
-                                tempPoint.X = nextEnd.X;
-                                tempPoint.Y = end.Y;
-                                //공구 이동
-                                toolMove = makeToolpath(tempPoint, downZ);
-                                order.Add(toolMove);
-                                tempPoint.Y = nextEnd.Y;
-                                //공구 내림
-                                toolMove = makeToolpath(tempPoint, downZ);
-                                order.Add(toolMove);
-                                end = nextEnd;
-                                //공구 이동
-                                toolMove = makeToolpath(nextStart, downZ);
-                                order.Add(toolMove);
-                                start = nextStart;
-                                current = start;
-                                leftToRight = true;
-                                toolPathManager[i].RemoveAt(j);
-                                if (toolPathManager[i].Count == 0)
-                                {
-                                    toolPathManager.RemoveAt(i);
-                                    i -= 1;
-                                    break;
-                                }
-                                break;
-                            }
-                            else if (nextEnd.X > end.X)
-                            {
-                                //공구 올림
-                                order.Add("VS30;");
-                                toolMove = makeToolpath(current, upZ);
-                                order.Add(toolMove);
-                                toolMove = makeToolpath(nextEnd, upZ);
-                                order.Add(toolMove);
-                                //공구 내림
-                                order.Add(toolDownSpeed);
-                                toolMove = makeToolpath(nextEnd, downZ);
-                                order.Add(toolMove);
-                                //공구 이동
-                                toolMove = makeToolpath(nextStart, downZ);
-                                order.Add(toolMove);
-                                start = nextStart;
-                                end = nextEnd;
-                                current = start;
-                                leftToRight = true;
-                                toolPathManager[i].RemoveAt(j);
-                                if (toolPathManager[i].Count == 0)
-                                {
-                                    toolPathManager.RemoveAt(i);
-                                    i -= 1;
-                                    break;
-                                }
-                                break;
-                            }*/
                         }
                         else
                         {
@@ -751,118 +675,15 @@ namespace MiniCAM
                                 order.Add(toolMove);
                                 order.Add(toolMove);
                                 order.Add(toolMove);
+                                //사용 변수들 초기화
+                                start = new Point(0, 0);
+                                end = new Point(0, 0);
+                                current = new Point(0, 0);
                                 isDrawLastRow = true;
                             }
                             break;
-
-                            if (isDrawLastRow)
-                            {
-                                start = nextStart;
-                                end = nextEnd;
-                                toolMove = makeToolpath(start, upZ);
-                                order.Add(toolMove);
-                                order.Add(toolDownSpeed);
-                                toolMove = makeToolpath(start, downZ);
-                                order.Add(toolMove);
-                                toolMove = makeToolpath(end, downZ);
-                                isDrawLastRow = false;
-                                count++;
-                                leftToRight = false;
-                                current = start;
-                                toolPathManager[i].RemoveAt(j);
-                                if (toolPathManager[i].Count == 0)
-                                {
-                                    toolPathManager.RemoveAt(i);
-                                    i -= 1;
-                                    break;
-                                }
-                                break;
-                            }
-                            //LtoR
-                            //수정 필요
-                            /*if (start.X < nextEnd.X && nextEnd.X < end.X)
-                            {
-                                tempPoint.X = start.X;
-                                tempPoint.Y = nextStart.Y;
-                                //공구 내림
-                                toolMove = makeToolpath(tempPoint, downZ);
-                                order.Add(toolMove);
-                                tempPoint.X = nextStart.X;
-                                //공구 이동
-                                toolMove = makeToolpath(tempPoint, downZ);
-                                order.Add(toolMove);
-                                start = nextStart;
-                                //공구 이동
-                                toolMove = makeToolpath(nextEnd, downZ);
-                                order.Add(toolMove);
-                                end = nextEnd;
-                                current = end;
-                                leftToRight = false;
-                                toolPathManager[i].RemoveAt(j);
-                                if (toolPathManager[i].Count == 0)
-                                {
-                                    toolPathManager.RemoveAt(i);
-                                    i -= 1;
-                                    break;
-                                }
-                                break;
-                            }
-                            else if (nextEnd.X > end.X) 
-                            {
-                                //공구 올림
-                                order.Add("VS30;");
-                                toolMove = makeToolpath(current, upZ);
-                                order.Add(toolMove);
-                                toolMove = makeToolpath(nextEnd, upZ);
-                                order.Add(toolMove);
-                                //공구 내림
-                                order.Add(toolDownSpeed);
-                                toolMove = makeToolpath(nextEnd, downZ);
-                                order.Add(toolMove);
-                                //공구 이동
-                                toolMove = makeToolpath(nextStart, downZ);
-                                order.Add(toolMove);
-                                start = nextStart;
-                                end = nextEnd;
-                                current = start;
-                                leftToRight = true;
-                                toolPathManager[i].RemoveAt(j);
-                                if (toolPathManager[i].Count == 0)
-                                {
-                                    toolPathManager.RemoveAt(i);
-                                    i -= 1;
-                                    break;
-                                }
-                                break;
-                            }*/
                         }
                     }
-
-                    /*if (i + 1 == toolPathManager.Count)
-                    {
-                        order.Add("VS30;");
-                        //공구 올림
-                        if (current == start)
-                        {
-                            toolMove = makeToolpath(current, upZ);
-                            order.Add(toolMove);
-                            isDrawLastRow = true;
-                            leftToRight = true;
-                            start = new Point();
-                            end = new Point();
-                            //count++;
-                        }
-                        else
-                        {
-                            toolMove = makeToolpath(current, upZ);
-                            order.Add(toolMove);
-                            isDrawLastRow = true;
-                            leftToRight = false;
-                            start = new Point();
-                            end = new Point();
-                            //count++;
-                        }
-                    }*/
                 }
             }
             order.Add("!VO;");
@@ -1032,15 +853,17 @@ namespace MiniCAM
         {
             string setMachineOperation = "";
             setMachineOperation = txtUpZ.Text;
-            upZ = Int32.Parse(setMachineOperation);
+            upZ = -(Int32.Parse(setMachineOperation));
             lblUpz.Content = "이동높이 : " + setMachineOperation + "mm";
         }
 
         private void btnHatchInterval_Click(object sender, RoutedEventArgs e)
         {
             string setMachineOperation = "";
+            double cal;
             setMachineOperation = txtHatchInterval.Text;
-            hatchInterval = Int32.Parse(setMachineOperation);
+            cal = Convert.ToDouble(setMachineOperation) * 50;
+            hatchInterval = (int)cal;
             lblHatchInterval.Content = "해칭간격 : " + setMachineOperation + "mm";
         }
         #endregion

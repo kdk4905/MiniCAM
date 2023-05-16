@@ -4,9 +4,14 @@
 속도, 깊이, 이동높이, 해칭간격
 조절할 수 있게 하기
 속도 : toolMoveSpeed
+ex) VS36!;
 깊이 : DownZ
+ex) 100
 이동높이 : UpZ
+ex) -80
 해칭간격 : hatchInterval
+ex) 1mm = x*1/50
+x = 50
 
 스택패널
 그리드로 묶어서 올리기
