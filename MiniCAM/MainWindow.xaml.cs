@@ -20,7 +20,9 @@ namespace MiniCAM
     {
         #region 필드
         Queue Data = new Queue(); //데이터 저장 큐
-        SerialPort sp = new SerialPort();
+        public SerialPort sp = new SerialPort();
+        //리팩토링 sp, Queue Data
+
         // 리스트
         // HTMP
         List<string> order = new List<string>();
@@ -66,13 +68,13 @@ namespace MiniCAM
             InitializeComponent();
 
             string[] _currentCOM = SerialPort.GetPortNames();
-
+            Connection conn = new Connection(sp, Data);
             cbx_Port.ItemsSource = _currentCOM;
-
             if(_currentCOM.Length == 1)
             {
                 cbx_Port.SelectedIndex = 0;
-                DeviceConnect();
+                //DeviceConnect();
+                lblConnectState.Content = conn.DeviceConnect(sp, _currentCOM[0]);
             }
 
            
@@ -86,10 +88,10 @@ namespace MiniCAM
         //기기 연결 버튼 클릭시
         private void btnMachineConnect_Click(object sender, RoutedEventArgs e)
         {
-            DeviceConnect();
+            //DeviceConnect();
         }
 
-        private void DeviceConnect()
+        /*private void DeviceConnect()
         {
             if (!sp.IsOpen)
             {
@@ -110,7 +112,7 @@ namespace MiniCAM
                 lblConnectState.Content = "연결상태 :";
                 lblConnectState.Content += " 이미 포트와 연결되었습니다.";
             }
-        }
+        }*/
 
         private void MakeList(Bitmap bmp)
         {
