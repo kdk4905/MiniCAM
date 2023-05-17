@@ -373,7 +373,7 @@ namespace MiniCAM
         private void btnOperationStart_Click(object sender, RoutedEventArgs e)
         {
             MakeList(_currentBmp);
-
+            order.Clear();
             initToolpath();
             #region 지역변수
             Point start, end, nextStart, nextEnd, tphlTemp;
@@ -882,11 +882,15 @@ namespace MiniCAM
             order.Add("IN;");
             order.Add("!CL1;");
             order.Add("!PM0,0;");
-
         }
         #endregion
         #region 툴패스 만들기
-        // 툴패스를 만드는 메서드
+        /// <summary>
+        /// ZZ 이동 명령어
+        /// </summary>
+        /// <param name="point">포인트</param>
+        /// <param name="z">올렸는지 내렸는지</param>
+        /// <returns></returns>
         private string makeToolpath(Point point, int z)
         {
             Point _point = point;
