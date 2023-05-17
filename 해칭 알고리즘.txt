@@ -1,0 +1,51 @@
+[해칭 알고리즘]
+
+#동작 원리
+이진화를 하면서 list에 그릴 데이터를 담는다.
+조각시작 버튼을 클릭하면
+첫 데이터를 그린 후
+남은 데이터를 그린다.
+남은 데이터는 while을 이용하고
+- while(list.Count != 0)
+데이터를 그린 후, 리스트에서 
+그린 데이터를 삭제한다.
+
+#해칭 알고리즘
+공구를 내릴때
+1. current(end)가
+다음 라인의 사이에 있을때
+nextStart.X < current.X < nextEnd.X
+공구를 nextEnd.X,current.Y로 이동한 뒤
+nextEnd.X, nextEnd.Y로 내린다
+
+2. current(end)가
+다음 라인의 사이에 없을때
+start가 다음 라인의 사이에 있는경우
+nextStart.X < start.X < nextEnd.X
+공구를 start.X,current.Y로 이동한 뒤
+nextEnd.X, nextEnd.Y로 내린다
+
+3. 다음 라인이 현재 라인의 안에 있는경우
+((start.X <= nextStart.X) && (nextStart.X <= current.X))
+&&
+((start.X <= nextEnd.X) && (nextEnd.X <= current.X))
+nextEnd.X, current.Y로 이동
+nextEnd로 공구를 내린뒤
+nextStart로 옮기면서 라인을 그린다
+
+공구를 들때
+//마지막 라인이 아닌경우
+1,2,3의 조건에 모두 해당이 안되는 경우
+리스트의 컬럼이 2개 이상인지 확인하고
+컬럼을 끝까지 확인했는데도
+1,2,3의 조건에 해당하는 다음 라인이 없으면
+공구를 든다
+
+//마지막 라인인 경우
+공구를 든다
+
+현재위치에서 공구를 든 다음
+사용했던 변수들을 초기화 하고
+처음으로 돌아간다
+
+

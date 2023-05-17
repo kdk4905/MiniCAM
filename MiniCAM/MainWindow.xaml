@@ -22,12 +22,12 @@
             <Button x:Name="btnMoveToolSpeed" Content="설정" Width="50" Height="25" HorizontalAlignment="Right" Margin="0,0,10,0" Click="btnMoveToolSpeed_Click"/>
         </Grid>
         <Grid Height="35">
-            <Label x:Name="lblDownZ" Content="깊이 : 100mm (기본)" Height="25" Width="200" HorizontalAlignment="Left" Margin="10,0,0,0"/>
+            <Label x:Name="lblDownZ" Content="깊이 : 0.1mm (기본)" Height="25" Width="200" HorizontalAlignment="Left" Margin="10,0,0,0"/>
             <TextBox x:Name="txtDownZ" Width="100" Height="25" HorizontalAlignment="Right" Margin="0,0,70,0"/>
             <Button x:Name="btnDownZ" Content="설정" Width="50" Height="25" HorizontalAlignment="Right" Margin="0,0,10,0" Click="btnDownZ_Click"/>
         </Grid>
         <Grid Height="35">
-            <Label x:Name="lblUpz" Content="이동높이 : 80mm (기본)" Height="25" Width="200" HorizontalAlignment="Left" Margin="10,0,0,0"/>
+            <Label x:Name="lblUpz" Content="이동높이 : 0.08mm (기본)" Height="25" Width="200" HorizontalAlignment="Left" Margin="10,0,0,0"/>
             <TextBox x:Name="txtUpZ" Width="100" Height="25" HorizontalAlignment="Right" Margin="0,0,70,0"/>
             <Button x:Name="btnUpZ" Content="설정" Width="50" Height="25" HorizontalAlignment="Right" Margin="0,0,10,0" Click="btnUpZ_Click"/>
         </Grid>

@@ -37,6 +37,7 @@ namespace MiniCAM
         int downZ = 100;
         int upZ = -80;
         int hatchInterval = 5;
+        int imgHeight, imgWidth;
         // bool
         bool IsSpOpen;
         // CNC 이미지
@@ -54,7 +55,6 @@ namespace MiniCAM
         // rgb 변수
         int rgb;
         // bmp의 좌표
-        int[,] Hatch;
         List<Point> bmpPixelPoint = new List<Point>();
         #endregion
         #region 메인 윈도우
@@ -63,10 +63,6 @@ namespace MiniCAM
             InitializeComponent();
             cbx_Port.ItemsSource = SerialPort.GetPortNames();
             initToolpath();
-
-            Thread t = new Thread(text);
-            t.IsBackground = true;
-            t.Start();
         }
         #endregion
         #region 이벤트
@@ -105,8 +101,9 @@ namespace MiniCAM
                     System.Drawing.Image img = System.Drawing.Image.FromFile(openDialog.FileName);
                     //img.Save("image.bmp", ImageFormat.Bmp);
                     Bitmap bmp = new Bitmap(img);
-                    // Hatch를 위한 배열
-                    Hatch = new int[bmp.Width, bmp.Height];
+
+                    imgWidth = bmp.Width;
+                    imgHeight = bmp.Height;
 
                     // flag
                     // flag true - 흰색
@@ -537,16 +534,14 @@ namespace MiniCAM
                                     toolMove = makeToolpath(nextStart, downZ);
                                     order.Add(toolMove);
                                 }
-                                //Row 27 -> Row 28
-                                //공구 들기 2
-                                //문제 지점
                                 //현재 라인이
                                 //이전 라인에
                                 //포함되어 있을때
                                 else if (
-                                    (start.X <= nextStart.X) && (nextStart.X <= current.X)
-                                    && ((start.X <= nextEnd.X) && (nextEnd.X <= current.X))
-                                        )
+                                         ((start.X <= nextStart.X) && (nextStart.X <= current.X))
+                                          && 
+                                         ((start.X <= nextEnd.X) && (nextEnd.X <= current.X))
+                                         )
                                 {
                                     //마지막 행일때
                                     //공구 들기 만들기
@@ -620,18 +615,6 @@ namespace MiniCAM
                                         break;
                                     }
                                 }
-                                //공구를 들었나?
-                                //start, end, current -> 0,0인 상태
-                                /*
-                                //기본
-                                tempPoint = new Point(current.X, nextEnd.Y);
-                                //공구 내림
-                                toolMove = makeToolpath(tempPoint, downZ);
-                                order.Add(toolMove);
-                                //공구 이동
-                                toolMove = makeToolpath(nextStart, downZ);
-                                order.Add(toolMove);
-                                */
                             }
                             start = nextStart;
                             end = nextEnd;
@@ -642,7 +625,6 @@ namespace MiniCAM
                             leftToRight = true;
                             current = nextStart;
                             isDrawFirstRow = false;
-                            //이거의 역할?
                             toolPathManager[i].RemoveAt(j);
                             if (toolPathManager[i].Count == 0)
                             {
@@ -727,10 +709,11 @@ namespace MiniCAM
                                 // 현재 라인이
                                 // 다음 라인을
                                 // 포함할 때
-                                // 교점의 거리 공식 필요
-                                else if (((start.X <= nextStart.X) && (nextStart.X <= current.X))
+                                else if (
+                                         ((start.X <= nextStart.X) && (nextStart.X <= current.X))
                                                                    &&
-                                           ((start.X <= nextEnd.X) && (nextEnd.X <= current.X)))
+                                           ((start.X <= nextEnd.X) && (nextEnd.X <= current.X))
+                                         )
                                 {
                                     if (i + 1 == toolPathManager.Count)
                                     {
@@ -802,16 +785,6 @@ namespace MiniCAM
                                     }
                                 }
                             }
-                            /*
-                            //기본
-                            tempPoint = new Point(current.X, nextEnd.Y);
-                            //공구 내림
-                            toolMove = makeToolpath(tempPoint, downZ);
-                            order.Add(toolMove);
-                            //공구 이동
-                            toolMove = makeToolpath(nextEnd, downZ);
-                            order.Add(toolMove);
-                            */
                             start = nextStart;
                             end = nextEnd;
                             toolMove = makeToolpath(start, downZ);
@@ -821,7 +794,6 @@ namespace MiniCAM
                             leftToRight = false;
                             current = nextEnd;
                             isDrawFirstRow = false;
-                            //
                             toolPathManager[i].RemoveAt(j);
                             if (toolPathManager[i].Count == 0)
                             {
@@ -956,29 +928,7 @@ namespace MiniCAM
             return bitmapSource;
         }
         #endregion
-        #region 미사용
-        #region 기기에 사용하려고 했던 메서드
-        private void text()
-        {
-            while (true)
-            {
-                if (Data.Count > 0)
-                {
-                    Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
-                    {
-                        string msg = DateTime.Now.ToString("HH:mm:ss.fff");
-                        var ReceiveData = Data.Dequeue();
-
-                        msg = string.Format("{0} : {1}\r\n", msg, ReceiveData);
-                        T_msg = string.Format("{0} : {1}", T_msg, msg);
-                        //T_text_list.Text = T_msg;
-                        //T_text_list.SelectionStart = T_text_list.Text.Length;
-                        //T_text_list.ScrollToEnd();
-                    }));
-                }
-                Thread.Sleep(10);
-            }
-        }
+        #region 시리얼 포트 데이터 리시브 이벤트
         //시리얼 포트 데이터 리시브 이벤트
         private void sp_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
@@ -986,12 +936,7 @@ namespace MiniCAM
             Data.Enqueue(getData);
             Thread.Sleep(1);
         }
-        private void MySerialReceived(object sender, EventArgs e)
-        {
-        }
         #endregion
-        #endregion
-
         #endregion
         #region 기계 설정
 
@@ -1006,16 +951,20 @@ namespace MiniCAM
         private void btnDownZ_Click(object sender, RoutedEventArgs e)
         {
             string setMachineOperation = "";
+            double cal;
             setMachineOperation = txtDownZ.Text;
-            downZ = Int32.Parse(setMachineOperation);
+            cal = Convert.ToDouble(setMachineOperation) * 1000;
+            downZ = (int)cal;
             lblDownZ.Content = "깊이 : " + setMachineOperation + "mm";
         }
 
         private void btnUpZ_Click(object sender, RoutedEventArgs e)
         {
             string setMachineOperation = "";
+            double cal;
             setMachineOperation = txtUpZ.Text;
-            upZ = -(Int32.Parse(setMachineOperation));
+            cal = Convert.ToDouble(setMachineOperation) * 1000;
+            upZ = -(int)cal;
             lblUpz.Content = "이동높이 : " + setMachineOperation + "mm";
         }
 
